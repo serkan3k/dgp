@@ -1,3 +1,4 @@
 *.exe
 Debug/
 Release/
+.vs/
