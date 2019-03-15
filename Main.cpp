@@ -10,6 +10,7 @@
 #include "Painter.h"
 #include <string>
 #include <cstring>
+#include <queue>
 
 int main(int, char ** argv)
 {
@@ -47,6 +48,16 @@ int main(int, char ** argv)
 			cout << mesh->edges[   mesh->verts[4]->edgeList[ne]   ]->v1i << " nnnnnnnnn\n";
 
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
+
+	int numVertices = mesh->verts.size();
+	std::priority_queue<float, std::vector<float>, std::greater<>> pq;
+	std::vector<std::vector<int>> parent;
+	parent.resize(numVertices);
+	for(int i = 0; i < numVertices; ++i)
+	{
+		parent[i].resize(numVertices);
+	}
+	
 
 	root->addChild( painter->getShapeSep(mesh) );
 
