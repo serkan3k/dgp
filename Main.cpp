@@ -49,13 +49,17 @@ int main(int, char ** argv)
 
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
-	int numVertices = mesh->verts.size();
+	const int numVertices = mesh->verts.size();
 	std::priority_queue<float, std::vector<float>, std::greater<>> pq;
 	std::vector<std::vector<int>> parent;
 	parent.resize(numVertices);
 	for(int i = 0; i < numVertices; ++i)
 	{
 		parent[i].resize(numVertices);
+		for(int j = 0; j < numVertices; ++j)
+		{
+			parent[i][j] = -1;
+		}
 	}
 	
 
