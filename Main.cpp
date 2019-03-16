@@ -50,18 +50,28 @@ int main(int, char ** argv)
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
-	std::priority_queue<float, std::vector<float>, std::greater<>> pq;
+	std::priority_queue<std::pair<float, int>, std::vector<std::pair<float,int>>, std::greater<>> pq;
 	std::vector<std::vector<int>> parent;
+	std::vector<std::vector<float>> shortestPathLength;
 	parent.resize(numVertices);
+	int source = 0;
 	for(int i = 0; i < numVertices; ++i)
 	{
 		parent[i].resize(numVertices);
+		shortestPathLength[i].resize(numVertices);
 		for(int j = 0; j < numVertices; ++j)
 		{
 			parent[i][j] = -1;
+			shortestPathLength[i][j] = FLT_MAX;
 		}
 	}
-	
+	while(!pq.empty())
+	{
+
+
+	}
+
+
 
 	root->addChild( painter->getShapeSep(mesh) );
 
