@@ -53,11 +53,13 @@ int main(int, char ** argv)
 	std::priority_queue<std::pair<float, int>, std::vector<std::pair<float,int>>, std::greater<>> pq;
 	std::vector<std::vector<int>> parent;
 	std::vector<std::vector<float>> shortestPathLength;
+	shortestPathLength.resize(numVertices);
 	parent.resize(numVertices);
 	int source = 0;
 	for(int i = 0; i < numVertices; ++i)
 	{
 		parent[i].resize(numVertices);
+		pq.push(std::make_pair(i == source ? 0 : FLT_MAX, i));
 		shortestPathLength[i].resize(numVertices);
 		for(int j = 0; j < numVertices; ++j)
 		{
@@ -67,8 +69,9 @@ int main(int, char ** argv)
 	}
 	while(!pq.empty())
 	{
-
-
+		auto x = pq.top();
+		cout << x.first << " " << x.second << endl;
+		pq.pop();
 	}
 
 
