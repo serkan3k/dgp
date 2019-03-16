@@ -39,7 +39,7 @@ int main(int, char ** argv)
 	for (int nv = 0; nv < mesh->verts[4]->vertList.size(); nv++)
 		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
-
+	cout << mesh->verts[4]->coords[0] << ", " << mesh->verts[4]->coords[1] << ", " << mesh->verts[4]->coords[2] << endl;
 	cout << "my (verts[4]) 1-ring neighborhood is: \n";
 	for (int ne = 0; ne < mesh->verts[4]->edgeList.size(); ne++)
 		if (mesh->edges[   mesh->verts[4]->edgeList[ne]   ]->v1i == 4)
@@ -51,27 +51,23 @@ int main(int, char ** argv)
 
 	const int numVertices = mesh->verts.size();
 	std::priority_queue<std::pair<float, int>, std::vector<std::pair<float,int>>, std::greater<>> pq;
-	std::vector<std::vector<int>> parent;
-	std::vector<std::vector<float>> shortestPathLength;
-	shortestPathLength.resize(numVertices);
-	parent.resize(numVertices);
 	int source = 0;
-	for(int i = 0; i < numVertices; ++i)
-	{
-		parent[i].resize(numVertices);
-		pq.push(std::make_pair(i == source ? 0 : FLT_MAX, i));
-		shortestPathLength[i].resize(numVertices);
-		for(int j = 0; j < numVertices; ++j)
-		{
-			parent[i][j] = -1;
-			shortestPathLength[i][j] = FLT_MAX;
-		}
-	}
+	std::vector<int> parent(numVertices, -1);
+	parent[source] = source;
+	std::vector<float> dist(numVertices, FLT_MAX);
+	dist[source] = 0;
+	std::vector<bool> visited(numVertices, false);
+	visited[source] = true;
+	pq.push(std::make_pair(0, source));
 	while(!pq.empty())
 	{
-		auto x = pq.top();
-		cout << x.first << " " << x.second << endl;
+		int u = pq.top().second;
 		pq.pop();
+		for(int i = 0; i < mesh->verts[u]->vertList.size(); ++i)
+		{
+			int v = mesh->verts[u]->vertList[i];
+
+		}
 	}
 
 
