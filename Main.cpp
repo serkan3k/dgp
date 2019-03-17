@@ -50,44 +50,55 @@ int main(int, char ** argv)
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
-	//
-	std::priority_queue<std::pair<float, int>, std::vector<std::pair<float,int>>, std::greater<>> pq;
-	int source = 0;
-	std::vector<int> parent(numVertices, -1);
-	parent[source] = source;
-	std::vector<float> dist(numVertices, FLT_MAX);
-	dist[source] = 0;
-	std::vector<bool> visited(numVertices, false);
-	visited[source] = true;
-	pq.push(std::make_pair(0, source));
-	while(!pq.empty())
-	{
-		auto top = pq.top();
-		int u = top.second;
-		visited[u] = true;
-		pq.pop();
-		for(int j = 0; j < mesh->verts[u]->vertList.size(); ++j)
+	std::vector<std::vector<float>> distances(numVertices);
+	std::vector<std::vector<int>> parents(numVertices);
+	for (int i = 0; i < numVertices; ++i) {
+		std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, std::greater<>> pq;
+		int source = i;
+		std::vector<int> parent(numVertices, -1);
+		parent[source] = source;
+		std::vector<float> dist(numVertices, FLT_MAX);
+		dist[source] = 0;
+		std::vector<bool> visited(numVertices, false);
+		visited[source] = true;
+		pq.push(std::make_pair(0, source));
+		while (!pq.empty())
 		{
-			int v = mesh->verts[u]->vertList[j];
-			auto v1 = mesh->verts[u]->coords;
-			auto v2 = mesh->verts[v]->coords;
-			float weight = sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
-									(v1[1] - v2[1]) * (v1[1] - v2[1]) +
-									(v1[2] - v2[2]) * (v1[2] - v2[2]));
-			if(!visited[v] && (dist[v] > dist[u] + weight))
+			auto top = pq.top();
+			int u = top.second;
+			visited[u] = true;
+			pq.pop();
+			for (int j = 0; j < mesh->verts[u]->vertList.size(); ++j)
 			{
-				dist[v] = dist[u] + weight;
-				pq.push(make_pair(dist[v], v));
-				parent[v] = u;
+				int v = mesh->verts[u]->vertList[j];
+				auto v1 = mesh->verts[u]->coords;
+				auto v2 = mesh->verts[v]->coords;
+				float weight = sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
+					(v1[1] - v2[1]) * (v1[1] - v2[1]) +
+					(v1[2] - v2[2]) * (v1[2] - v2[2]));
+				if (!visited[v] && (dist[v] > dist[u] + weight))
+				{
+					dist[v] = dist[u] + weight;
+					pq.push(make_pair(dist[v], v));
+					parent[v] = u;
+				}
 			}
 		}
+		distances[i] = dist;
+		parents[i] = parent;
 	}
+	FILE * pFile;
+	pFile = fopen("out.txt", "w");
+
 	for(int i = 0; i < numVertices; ++i)
 	{
-		cout << dist[i] << " ";
+		for(int j = 0; j < numVertices; j++)
+		{
+			fprintf(pFile, "%g ",distances[i][j]);
+		}
+		fprintf(pFile, "\n");
 	}
-	cout << endl;
-
+	fclose(pFile);
 	root->addChild( painter->getShapeSep(mesh) );
 
 
