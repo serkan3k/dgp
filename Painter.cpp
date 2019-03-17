@@ -10,7 +10,7 @@ SoSeparator* Painter::getShapeSep(Mesh* mesh)
 
 	//color
 	SoMaterial* mat = new SoMaterial();
-	mat->diffuseColor.setValue(0, 1, 0); //paint all vertices with this color
+	mat->diffuseColor.setValue(1, 1, 1); //paint all vertices with this color
 	//mat->transparency = 0.5f : 0.0f; //0 makes it completely opaque, the default
 
 	bool youWantToPaintEachVertexDifferently = false;
