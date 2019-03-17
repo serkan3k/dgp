@@ -11,6 +11,7 @@
 #include <string>
 #include <cstring>
 #include <queue>
+#include <chrono>
 
 int main(int, char ** argv)
 {
@@ -50,8 +51,10 @@ int main(int, char ** argv)
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
+#pragma region minHeap
 	std::vector<std::vector<float>> distances(numVertices);
 	std::vector<std::vector<int>> parents(numVertices);
+	chrono::high_resolution_clock::time_point t0 = chrono::high_resolution_clock::now();
 	for (int i = 0; i < numVertices; ++i) {
 		std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, std::greater<>> pq;
 		int source = i;
@@ -87,6 +90,65 @@ int main(int, char ** argv)
 		distances[i] = dist;
 		parents[i] = parent;
 	}
+	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Min heap: " << duration << endl;
+#pragma endregion 
+#pragma region array
+	distances.clear();
+	distances.resize(numVertices);
+	for(auto &d:distances){
+		d.resize(numVertices);
+	}
+	parents.clear();
+	parents.resize(numVertices);
+	t0 = chrono::high_resolution_clock::now();
+	for (int i = 0; i < numVertices; ++i) {
+		float * arr = nullptr;
+		arr = new float[numVertices];
+		for(int j = 0; j < numVertices; ++j){
+			if (i == j) arr[j] = 0;
+			else arr[j] = FLT_MAX;
+		}
+		std::vector<int> parent(numVertices, -1);
+		parent[i] = i;
+		std::vector<bool> visited(numVertices, false);
+		while (true)
+		{
+			float minDist = FLT_MAX;
+			int minDistIndex = -1;
+			for(int k = 0; k < numVertices; k++){
+				if(!visited[k] && arr[k] < minDist){
+					minDist = arr[k];
+					minDistIndex = k;
+				}
+			}
+			if (minDistIndex == -1) break;
+			int u = minDistIndex;
+			visited[u] = true;
+			for (int l = 0; l < mesh->verts[u]->vertList.size(); ++l){
+				int v = mesh->verts[u]->vertList[l];
+				auto v1 = mesh->verts[u]->coords;
+				auto v2 = mesh->verts[v]->coords;
+				float weight = sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
+					(v1[1] - v2[1]) * (v1[1] - v2[1]) +
+					(v1[2] - v2[2]) * (v1[2] - v2[2]));
+				if (!visited[v] && (arr[v] > arr[u] + weight)){
+					arr[v] = arr[u] + weight;
+					parent[v] = u;
+				}
+			}
+		}
+		for(int m = 0; m < numVertices; ++m){
+			distances[i][m] = arr[m];
+		}
+		parents[i] = parent;
+		delete [] arr;
+	}
+	t1 = chrono::high_resolution_clock::now();
+	duration= chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Array: " << duration << endl;
+#pragma endregion 
 	FILE * pFile;
 	pFile = fopen("out.txt", "w");
 
