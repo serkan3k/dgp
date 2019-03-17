@@ -50,6 +50,7 @@ int main(int, char ** argv)
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
+	//
 	std::priority_queue<std::pair<float, int>, std::vector<std::pair<float,int>>, std::greater<>> pq;
 	int source = 0;
 	std::vector<int> parent(numVertices, -1);
@@ -61,16 +62,31 @@ int main(int, char ** argv)
 	pq.push(std::make_pair(0, source));
 	while(!pq.empty())
 	{
-		int u = pq.top().second;
+		auto top = pq.top();
+		int u = top.second;
+		visited[u] = true;
 		pq.pop();
-		for(int i = 0; i < mesh->verts[u]->vertList.size(); ++i)
+		for(int j = 0; j < mesh->verts[u]->vertList.size(); ++j)
 		{
-			int v = mesh->verts[u]->vertList[i];
-
+			int v = mesh->verts[u]->vertList[j];
+			auto v1 = mesh->verts[u]->coords;
+			auto v2 = mesh->verts[v]->coords;
+			float weight = sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
+									(v1[1] - v2[1]) * (v1[1] - v2[1]) +
+									(v1[2] - v2[2]) * (v1[2] - v2[2]));
+			if(!visited[v] && (dist[v] > dist[u] + weight))
+			{
+				dist[v] = dist[u] + weight;
+				pq.push(make_pair(dist[v], v));
+				parent[v] = u;
+			}
 		}
 	}
-
-
+	for(int i = 0; i < numVertices; ++i)
+	{
+		cout << dist[i] << " ";
+	}
+	cout << endl;
 
 	root->addChild( painter->getShapeSep(mesh) );
 
