@@ -51,6 +51,25 @@ int main(int, char ** argv)
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
+
+	int dijkstraQueryFirst = -1;
+	int dijkstraQuerySecond = -1;
+	while (dijkstraQueryFirst < 0 || dijkstraQueryFirst >= numVertices) {
+		cout << "Enter first vertex index, [0," << numVertices - 1 << "] :";
+		cin >> dijkstraQueryFirst;
+		if(dijkstraQueryFirst < 0 || dijkstraQueryFirst >= numVertices){
+			cout << "Invalid index, try again: ";
+		}
+	}
+	while (dijkstraQuerySecond < 0 || dijkstraQuerySecond >= numVertices) {
+		cout << "Enter second vertex index, [0," << numVertices-1 << "] :";
+		cin >> dijkstraQuerySecond;
+		if (dijkstraQuerySecond < 0 || dijkstraQuerySecond >= numVertices) {
+			cout << "Invalid index, try again: ";
+		}
+	}
+
+	cout << dijkstraQueryFirst << " " << dijkstraQuerySecond << endl;
 #pragma region minHeap
 	std::vector<std::vector<float>> distances(numVertices);
 	std::vector<std::vector<int>> parents(numVertices);
@@ -94,7 +113,9 @@ int main(int, char ** argv)
 	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Min heap: " << duration << endl;
 #pragma endregion 
+	
 #pragma region array
+	/*
 	distances.clear();
 	distances.resize(numVertices);
 	for(auto &d:distances){
@@ -148,7 +169,9 @@ int main(int, char ** argv)
 	t1 = chrono::high_resolution_clock::now();
 	duration= chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Array: " << duration << endl;
+	*/
 #pragma endregion 
+	
 	FILE * pFile;
 	pFile = fopen("out.txt", "w");
 
@@ -161,6 +184,9 @@ int main(int, char ** argv)
 		fprintf(pFile, "\n");
 	}
 	fclose(pFile);
+
+
+
 	root->addChild( painter->getShapeSep(mesh) );
 
 
