@@ -5,6 +5,10 @@
 #define HAVE_INT8_T
 #include <Inventor/Win/SoWin.h>
 #include <Inventor/Win/viewers/SoWinExaminerViewer.h>
+#include <Inventor/nodes/SoSphere.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoMaterial.h>
+
 
 #include "Mesh.h"
 #include "Painter.h"
@@ -184,11 +188,21 @@ int main(int, char ** argv)
 		fprintf(pFile, "\n");
 	}
 	fclose(pFile);
-
-
+	
 
 	root->addChild( painter->getShapeSep(mesh) );
 
+	SoSeparator *sphereRoot = new SoSeparator;
+	SoTransform *sphereTransform = new SoTransform;
+	sphereTransform->translation.setValue(17., 17., 0.);
+	sphereTransform->scaleFactor.setValue(8., 8., 8.);
+	sphereRoot->addChild(sphereTransform);
+
+	auto sphereMaterial = new SoMaterial;
+	sphereMaterial->diffuseColor.setValue(.8, .8, .8);
+	sphereRoot->addChild(sphereMaterial);
+	sphereRoot->addChild(new SoSphere);
+	root->addChild(sphereRoot);
 
 	viewer->setSize(SbVec2s(640, 480));
 	viewer->setSceneGraph(root);
