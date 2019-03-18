@@ -207,6 +207,18 @@ int main(int, char ** argv)
 			cout << "Invalid index, try again: ";
 		}
 	}
+	std::vector<int> shortestPathVertices;
+	shortestPathVertices.push_back(p2);	// add dest node
+	int p2Parent = parents[p1][p2];
+	while(p2Parent != p1){
+		shortestPathVertices.push_back(p2Parent);
+		p2Parent = parents[p1][p2Parent];
+	}
+	shortestPathVertices.push_back(p1);	// add source node
+	for(const auto &spv:shortestPathVertices){
+		cout << spv << " ";
+	}
+	cout << endl;
 
 	root->addChild( painter->getShapeSep(mesh) );
 
