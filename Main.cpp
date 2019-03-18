@@ -55,7 +55,8 @@ int main(int, char ** argv)
 //		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
-
+#pragma region dijkstraQuery
+	/*
 	int dijkstraQueryFirst = -1;
 	int dijkstraQuerySecond = -1;
 	while (dijkstraQueryFirst < 0 || dijkstraQueryFirst >= numVertices) {
@@ -72,8 +73,10 @@ int main(int, char ** argv)
 			cout << "Invalid index, try again: ";
 		}
 	}
-
 	cout << dijkstraQueryFirst << " " << dijkstraQuerySecond << endl;
+	*/
+#pragma endregion 
+
 #pragma region minHeap
 	std::vector<std::vector<float>> distances(numVertices);
 	std::vector<std::vector<int>> parents(numVertices);
@@ -175,7 +178,7 @@ int main(int, char ** argv)
 	std::cout << "Array: " << duration << endl;
 	*/
 #pragma endregion 
-	
+
 	FILE * pFile;
 	pFile = fopen("out.txt", "w");
 
@@ -188,7 +191,22 @@ int main(int, char ** argv)
 		fprintf(pFile, "\n");
 	}
 	fclose(pFile);
-	
+
+	int p1 = -1, p2 = -1;
+	while (p1 < 0 || p1 >= numVertices) {
+		cout << "Enter first vertex index, [0," << numVertices - 1 << "] :";
+		cin >> p1;
+		if (p1 < 0 || p1 >= numVertices) {
+			cout << "Invalid index, try again: ";
+		}
+	}
+	while (p2 < 0 || p2 >= numVertices) {
+		cout << "Enter second vertex index, [0," << numVertices - 1 << "] :";
+		cin >> p2;
+		if (p2 < 0 || p2 >= numVertices) {
+			cout << "Invalid index, try again: ";
+		}
+	}
 
 	root->addChild( painter->getShapeSep(mesh) );
 
