@@ -277,7 +277,14 @@ int main(int, char ** argv)
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << endl << "Sampling points: " << duration << endl;
 #pragma endregion
-
+	int k = -1;
+	while (k < 0 || k >= numVertices) {
+		cout << "Enter the number of bins, [0," << numVertices - 1 << "] :";
+		cin >> k;
+		if (k < 0 || k >= numVertices) {
+			cout << "Invalid bin count, try again: ";
+		}
+	}
 
 	root->addChild( painter->getShapeSep(mesh) );
 
