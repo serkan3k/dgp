@@ -22,7 +22,7 @@
 int main(int, char ** argv)
 {
 	HWND window = SoWin::init(argv[0]);
-
+// 
 	SoWinExaminerViewer * viewer = new SoWinExaminerViewer(window);
 
 	//make a dead simple scene graph by using the Coin library, only containing a single cone under the scenegraph root
