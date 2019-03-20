@@ -314,7 +314,7 @@ int main(int, char ** argv)
 			auto distV2 = distances[seedIndex][triangles[j]->v2i];
 			auto distV3 = distances[seedIndex][triangles[j]->v3i];
 			if ((distV1 < radius && distV2 < radius && distV3 < radius)
-				|| (distV1 > radius && distV2 > radius && distV3 > radius)) break;
+				|| (distV1 > radius && distV2 > radius && distV3 > radius)) continue;
 			std::vector<int> lt, gt;
 			distV1 <= radius ? lt.push_back(triangles[j]->v1i) : gt.push_back(triangles[j]->v1i);
 			distV2 <= radius ? lt.push_back(triangles[j]->v2i) : gt.push_back(triangles[j]->v2i);
