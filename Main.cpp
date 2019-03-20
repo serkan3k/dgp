@@ -319,6 +319,7 @@ int main(int, char ** argv)
 			distV1 <= radius ? lt.push_back(triangles[j]->v1i) : gt.push_back(triangles[j]->v1i);
 			distV2 <= radius ? lt.push_back(triangles[j]->v2i) : gt.push_back(triangles[j]->v2i);
 			distV3 <= radius ? lt.push_back(triangles[j]->v3i) : gt.push_back(triangles[j]->v3i);
+			if (lt.empty() || gt.empty()) continue;
 			float a1, a2, g0, g1, g2;
 			std::vector<float> p1(3), p2(3);
 			float * v0, * v1, * v2;
@@ -338,7 +339,7 @@ int main(int, char ** argv)
 				p2[1] = (1.0f - a2) * v0[1] + a2 * v2[1];
 				p2[2] = (1.0f - a2) * v0[2] + a2 * v2[2];
 			}
-			else{
+			else if(lt.size() > gt.size()){
 				g0 = distances[seedIndex][lt[0]];
 				g1 = distances[seedIndex][lt[1]];
 				g2 = distances[seedIndex][gt[0]];
