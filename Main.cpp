@@ -286,7 +286,6 @@ int main(int, char ** argv)
 			cout << "Invalid seed index, try again: ";
 		}
 	}
-
 	int k = -1;
 	while (k < 0 || k >= numVertices) {
 		cout << "Enter the number of bins, [0," << numVertices - 1 << "] :";
@@ -298,10 +297,8 @@ int main(int, char ** argv)
 	t0 = chrono::high_resolution_clock::now();
 	float maxDist = FLT_MIN;
 	for(int i = 0; i < numVertices; ++i){
-		for(int j = 0; j < numVertices; ++j){
-			if(distances[i][j] > maxDist){
-				maxDist = distances[i][j];
-			}
+		if(distances[seedIndex][i] > maxDist){
+			maxDist = distances[seedIndex][i];
 		}
 	}
 	float d = maxDist / (float)k;
