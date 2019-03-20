@@ -223,6 +223,7 @@ int main(int, char ** argv)
 	cout << endl;
 
 #pragma region fps
+	t0 = chrono::high_resolution_clock::now();
 	std::vector<int> fpsVertices;
 	int randomIndex = rand() % numVertices;
 	fpsVertices.push_back(randomIndex);
@@ -234,21 +235,47 @@ int main(int, char ** argv)
 			maxDistIndex = i;
 		}
 	}
-
 	fpsVertices.push_back(maxDistIndex);
 	for (int i = 0; i < fpsVertices.size(); ++i) {
 		cout << fpsVertices[i] << " ";
 	}
-	const int numSamples = 10;
+	const int numSamples = 100;
 	while (fpsVertices.size() < numSamples) {
-		
+		std::vector<pair<int, int>> associations;	// which vertex is associated with whom	(i, j)
 		for (int i = 0; i < numVertices; ++i) {
+			float minDist = FLT_MAX;
+			int minIndex = -1;
 			for (int j = 0; j < fpsVertices.size(); ++j) {
-
+				if (i == fpsVertices[j]) {
+					minIndex = -1;
+					minDist = FLT_MAX;
+					break;
+				}
+				if (distances[i][fpsVertices[j]] < minDist) {
+					minDist = distances[i][fpsVertices[j]];
+					minIndex = fpsVertices[j];
+				}
+			}
+			//cout << "Min index is: " << minIndex << " with distance: " << minDist;
+			if (minIndex != -1) {
+				associations.push_back(make_pair(i, minIndex));
+			}		// pair.first is in the elements to be sampled, pair.second are already sampled
+		}
+		// get the argmax out of all
+		float maxDist = FLT_MIN;
+		int maxIndex = -1;
+		for (int i = 0; i < associations.size(); ++i) {
+			if (distances[associations[i].first][associations[i].second] > maxDist) {
+				maxIndex = associations[i].first;
+				maxDist = distances[associations[i].first][associations[i].second];
 			}
 		}
-
+		//cout << "Sampled index is: " << maxIndex << " with distance: " << maxDist << endl;
+		fpsVertices.push_back(maxIndex);
 	}
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << endl << "Sampling points: " << duration << endl;
 #pragma endregion
 
 
