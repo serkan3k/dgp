@@ -17,6 +17,8 @@
 #include <queue>
 #include <chrono>
 
+//std::vector<int> getFarthestPointSamplePoints(std::vector<int> &dist, int numberOfPoints,)
+
 int main(int, char ** argv)
 {
 	HWND window = SoWin::init(argv[0]);
@@ -192,7 +194,7 @@ int main(int, char ** argv)
 	}
 	fclose(pFile);
 
-	int p1 = -1, p2 = -1;
+	int p1 = 0, p2 = 200;
 	while (p1 < 0 || p1 >= numVertices) {
 		cout << "Enter first vertex index, [0," << numVertices - 1 << "] :";
 		cin >> p1;
@@ -219,6 +221,36 @@ int main(int, char ** argv)
 		cout << spv << " ";
 	}
 	cout << endl;
+
+#pragma region fps
+	std::vector<int> fpsVertices;
+	int randomIndex = rand() % numVertices;
+	fpsVertices.push_back(randomIndex);
+	float maxDist = FLT_MIN;
+	int maxDistIndex = -1;
+	for (int i = 0; i < numVertices; ++i) {
+		if (distances[randomIndex][i] > maxDist) {
+			maxDist = distances[randomIndex][i];
+			maxDistIndex = i;
+		}
+	}
+
+	fpsVertices.push_back(maxDistIndex);
+	for (int i = 0; i < fpsVertices.size(); ++i) {
+		cout << fpsVertices[i] << " ";
+	}
+	const int numSamples = 10;
+	while (fpsVertices.size() < numSamples) {
+		
+		for (int i = 0; i < numVertices; ++i) {
+			for (int j = 0; j < fpsVertices.size(); ++j) {
+
+			}
+		}
+
+	}
+#pragma endregion
+
 
 	root->addChild( painter->getShapeSep(mesh) );
 
