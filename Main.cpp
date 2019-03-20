@@ -308,6 +308,7 @@ int main(int, char ** argv)
 	int numTris = mesh->tris.size();
 	auto triangles = mesh->tris;
 	std::vector<float> histogramBins(k);
+	std::vector<pair<std::vector<float>, std::vector<float>>> isoCurveLines;
 	for(int i = 1; i <= k; ++i){
 		float radius = i * d;
 		float isoCurveLength = 0.0f;
@@ -321,26 +322,46 @@ int main(int, char ** argv)
 			distV1 <= radius ? lt.push_back(triangles[i]->v1i) : gt.push_back(triangles[i]->v1i);
 			distV2 <= radius ? lt.push_back(triangles[i]->v2i) : gt.push_back(triangles[i]->v2i);
 			distV3 <= radius ? lt.push_back(triangles[i]->v3i) : gt.push_back(triangles[i]->v3i);
-			float p1x, p1y, p1z, p2x, p2y, p2z, a1, a2;
+			float a1, a2, g0, g1, g2;
+			std::vector<float> p1(3), p2(3);
+			float * v0, * v1, * v2;
 			if(lt.size() < gt.size()){
-				float g0 = distances[seedIndex][lt[0]];
-				float g1 = distances[seedIndex][gt[0]];
-				float g2 = distances[seedIndex][gt[1]];
+				g0 = distances[seedIndex][lt[0]];
+				g1 = distances[seedIndex][gt[0]];
+				g2 = distances[seedIndex][gt[1]];
 				a1 = fabs(radius - g0) / fabs(g1 - g0);
 				a2 = fabs(radius - g0) / fabs(g2 - g0);
-				auto v0 = mesh->verts[lt[0]]->coords;
-				auto v1 = mesh->verts[gt[0]]->coords;
-				auto v2 = mesh->verts[gt[1]]->coords;
-				p1x = (1.0f - a1) * v0[0] + a1 * v1[0];
-				p1y = (1.0f - a1) * v0[1] + a1 * v1[1];
-				p1z = (1.0f - a1) * v0[2] + a1 * v1[2];
-				p2x = (1.0f - a1) * v0[0] + a2 * v2[0];
-				p2y = (1.0f - a1) * v0[0] + a2 * v2[1];
-				p2z = (1.0f - a1) * v0[0] + a2 * v2[2];
+				v0 = mesh->verts[lt[0]]->coords;
+				v1 = mesh->verts[gt[0]]->coords;
+				v2 = mesh->verts[gt[1]]->coords;
+				p1[0] = (1.0f - a1) * v0[0] + a1 * v1[0];
+				p1[1] = (1.0f - a1) * v0[1] + a1 * v1[1];
+				p1[2] = (1.0f - a1) * v0[2] + a1 * v1[2];
+				p2[0] = (1.0f - a2) * v0[0] + a2 * v2[0];
+				p2[1] = (1.0f - a2) * v0[1] + a2 * v2[1];
+				p2[2] = (1.0f - a2) * v0[2] + a2 * v2[2];
 			}
 			else{
-				
+				g0 = distances[seedIndex][lt[0]];
+				g1 = distances[seedIndex][lt[1]];
+				g2 = distances[seedIndex][gt[0]];
+				a1 = fabs(radius - g0) / fabs(g2 - g0);
+				a2 = fabs(radius - g1) / fabs(g2 - g1);
+				v0 = mesh->verts[lt[0]]->coords;
+				v1 = mesh->verts[lt[1]]->coords;
+				v2 = mesh->verts[gt[0]]->coords;
+				p1[0] = (1.0f - a1) * v0[0] + a1 * v2[0];
+				p1[1] = (1.0f - a1) * v0[1] + a1 * v2[1];
+				p1[2] = (1.0f - a1) * v0[2] + a1 * v2[2];
+				p2[0] = (1.0f - a2) * v1[0] + a2 * v2[0];
+				p2[1] = (1.0f - a2) * v1[1] + a2 * v2[1];
+				p2[2] = (1.0f - a2) * v1[2] + a2 * v2[2];
 			}
+			float p1p2dist = sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) +
+								(p1[1] - p2[1]) * (p1[1] - p2[1]) + 
+								(p1[2] - p2[2]) * (p1[2] - p2[2]));
+			isoCurveLength += p1p2dist;
+			isoCurveLines.push_back(make_pair(p1, p2));
 		}
 		histogramBins[i - 1] = isoCurveLength;
 	}
