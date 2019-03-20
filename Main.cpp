@@ -277,6 +277,16 @@ int main(int, char ** argv)
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << endl << "Sampling points: " << duration << endl;
 #pragma endregion
+#pragma region geodesic isocurves
+	int seedIndex = -1;
+	while (seedIndex < 0 || seedIndex >= numVertices) {
+		cout << "Enter the seed index, [0," << numVertices - 1 << "] :";
+		cin >> seedIndex;
+		if (seedIndex < 0 || seedIndex >= numVertices) {
+			cout << "Invalid seed index, try again: ";
+		}
+	}
+
 	int k = -1;
 	while (k < 0 || k >= numVertices) {
 		cout << "Enter the number of bins, [0," << numVertices - 1 << "] :";
@@ -285,7 +295,28 @@ int main(int, char ** argv)
 			cout << "Invalid bin count, try again: ";
 		}
 	}
-
+	t0 = chrono::high_resolution_clock::now();
+	float maxDist = FLT_MIN;
+	for(int i = 0; i < numVertices; ++i){
+		for(int j = 0; j < numVertices; ++j){
+			if(distances[i][j] > maxDist){
+				maxDist = distances[i][j];
+			}
+		}
+	}
+	float d = maxDist / (float)k;
+	int numTris = mesh->tris.size();
+	auto triangles = mesh->tris;
+	for(int i = 0; i < k; ++k){
+		float radius = k * d;
+		for(int j = 0; j < numTris; ++j){
+			
+		}
+	}
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << endl << "Geodesic isocurve: " << duration << endl;
+#pragma endregion
 	root->addChild( painter->getShapeSep(mesh) );
 
 	SoSeparator *sphereRoot = new SoSeparator;
