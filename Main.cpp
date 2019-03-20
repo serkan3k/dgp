@@ -307,11 +307,42 @@ int main(int, char ** argv)
 	float d = maxDist / (float)k;
 	int numTris = mesh->tris.size();
 	auto triangles = mesh->tris;
-	for(int i = 0; i < k; ++k){
-		float radius = k * d;
+	std::vector<float> histogramBins(k);
+	for(int i = 1; i <= k; ++i){
+		float radius = i * d;
+		float isoCurveLength = 0.0f;
 		for(int j = 0; j < numTris; ++j){
-			
+			auto distV1 = distances[seedIndex][triangles[i]->v1i];
+			auto distV2 = distances[seedIndex][triangles[i]->v2i];
+			auto distV3 = distances[seedIndex][triangles[i]->v3i];
+			if ((distV1 < radius && distV2 < radius && distV3 < radius)
+				|| (distV1 > radius && distV2 > radius && distV3 > radius)) break;
+			std::vector<int> lt, gt;
+			distV1 <= radius ? lt.push_back(triangles[i]->v1i) : gt.push_back(triangles[i]->v1i);
+			distV2 <= radius ? lt.push_back(triangles[i]->v2i) : gt.push_back(triangles[i]->v2i);
+			distV3 <= radius ? lt.push_back(triangles[i]->v3i) : gt.push_back(triangles[i]->v3i);
+			float p1x, p1y, p1z, p2x, p2y, p2z, a1, a2;
+			if(lt.size() < gt.size()){
+				float g0 = distances[seedIndex][lt[0]];
+				float g1 = distances[seedIndex][gt[0]];
+				float g2 = distances[seedIndex][gt[1]];
+				a1 = fabs(radius - g0) / fabs(g1 - g0);
+				a2 = fabs(radius - g0) / fabs(g2 - g0);
+				auto v0 = mesh->verts[lt[0]]->coords;
+				auto v1 = mesh->verts[gt[0]]->coords;
+				auto v2 = mesh->verts[gt[1]]->coords;
+				p1x = (1.0f - a1) * v0[0] + a1 * v1[0];
+				p1y = (1.0f - a1) * v0[1] + a1 * v1[1];
+				p1z = (1.0f - a1) * v0[2] + a1 * v1[2];
+				p2x = (1.0f - a1) * v0[0] + a2 * v2[0];
+				p2y = (1.0f - a1) * v0[0] + a2 * v2[1];
+				p2z = (1.0f - a1) * v0[0] + a2 * v2[2];
+			}
+			else{
+				
+			}
 		}
+		histogramBins[i - 1] = isoCurveLength;
 	}
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
