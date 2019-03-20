@@ -295,13 +295,13 @@ int main(int, char ** argv)
 		}
 	}
 	t0 = chrono::high_resolution_clock::now();
-	float maxDist = FLT_MIN;
+	float maxVertexDist = FLT_MIN;
 	for(int i = 0; i < numVertices; ++i){
-		if(distances[seedIndex][i] > maxDist){
-			maxDist = distances[seedIndex][i];
+		if(distances[seedIndex][i] > maxVertexDist){
+			maxVertexDist = distances[seedIndex][i];
 		}
 	}
-	float d = maxDist / (float)k;
+	float d = maxVertexDist / (float)k;
 	int numTris = mesh->tris.size();
 	auto triangles = mesh->tris;
 	std::vector<float> histogramBins(k);
@@ -310,15 +310,15 @@ int main(int, char ** argv)
 		float radius = i * d;
 		float isoCurveLength = 0.0f;
 		for(int j = 0; j < numTris; ++j){
-			auto distV1 = distances[seedIndex][triangles[i]->v1i];
-			auto distV2 = distances[seedIndex][triangles[i]->v2i];
-			auto distV3 = distances[seedIndex][triangles[i]->v3i];
+			auto distV1 = distances[seedIndex][triangles[j]->v1i];
+			auto distV2 = distances[seedIndex][triangles[j]->v2i];
+			auto distV3 = distances[seedIndex][triangles[j]->v3i];
 			if ((distV1 < radius && distV2 < radius && distV3 < radius)
 				|| (distV1 > radius && distV2 > radius && distV3 > radius)) break;
 			std::vector<int> lt, gt;
-			distV1 <= radius ? lt.push_back(triangles[i]->v1i) : gt.push_back(triangles[i]->v1i);
-			distV2 <= radius ? lt.push_back(triangles[i]->v2i) : gt.push_back(triangles[i]->v2i);
-			distV3 <= radius ? lt.push_back(triangles[i]->v3i) : gt.push_back(triangles[i]->v3i);
+			distV1 <= radius ? lt.push_back(triangles[j]->v1i) : gt.push_back(triangles[j]->v1i);
+			distV2 <= radius ? lt.push_back(triangles[j]->v2i) : gt.push_back(triangles[j]->v2i);
+			distV3 <= radius ? lt.push_back(triangles[j]->v3i) : gt.push_back(triangles[j]->v3i);
 			float a1, a2, g0, g1, g2;
 			std::vector<float> p1(3), p2(3);
 			float * v0, * v1, * v2;
