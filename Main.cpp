@@ -22,43 +22,19 @@
 int main(int, char ** argv)
 {
 	HWND window = SoWin::init(argv[0]);
-// 
 	SoWinExaminerViewer * viewer = new SoWinExaminerViewer(window);
-
-	//make a dead simple scene graph by using the Coin library, only containing a single cone under the scenegraph root
 	SoSeparator * root = new SoSeparator;
 	root->ref();
-
-	//stuff to be drawn on screen must be added to the root
-//	SoCone * cone = new SoCone;
-//	root->addChild(cone);
-
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
-
+	// load mesh
 	char* x = (char*)malloc(strlen("0.off") + 1); 
 	strcpy(x, "0.off");
 	mesh->loadOff(x);
-	//mesh->createCube(20.0f);
-
-
-	cout << "my (verts[4]) 1-ring neighborhood is: \n";
-	for (int nv = 0; nv < mesh->verts[4]->vertList.size(); nv++)
-		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
-
-	cout << mesh->verts[4]->coords[0] << ", " << mesh->verts[4]->coords[1] << ", " << mesh->verts[4]->coords[2] << endl;
-	cout << "my (verts[4]) 1-ring neighborhood is: \n";
-	for (int ne = 0; ne < mesh->verts[4]->edgeList.size(); ne++)
-		if (mesh->edges[   mesh->verts[4]->edgeList[ne]   ]->v1i == 4)
-			cout << mesh->edges[   mesh->verts[4]->edgeList[ne]   ]->v2i << " nnnnnnnnn\n";
-		else
-			cout << mesh->edges[   mesh->verts[4]->edgeList[ne]   ]->v1i << " nnnnnnnnn\n";
-
-//		cout << mesh->verts[4]->vertList[nv] << " neighbb\n";
 
 	const int numVertices = mesh->verts.size();
 #pragma region dijkstraQuery
-	/*
+	
 	int dijkstraQueryFirst = -1;
 	int dijkstraQuerySecond = -1;
 	while (dijkstraQueryFirst < 0 || dijkstraQueryFirst >= numVertices) {
@@ -76,53 +52,9 @@ int main(int, char ** argv)
 		}
 	}
 	cout << dijkstraQueryFirst << " " << dijkstraQuerySecond << endl;
-	*/
+	
 #pragma endregion 
 
-#pragma region minHeap
-	std::vector<std::vector<float>> distances(numVertices);
-	std::vector<std::vector<int>> parents(numVertices);
-	chrono::high_resolution_clock::time_point t0 = chrono::high_resolution_clock::now();
-	for (int i = 0; i < numVertices; ++i) {
-		std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, std::greater<>> pq;
-		int source = i;
-		std::vector<int> parent(numVertices, -1);
-		parent[source] = source;
-		std::vector<float> dist(numVertices, FLT_MAX);
-		dist[source] = 0;
-		std::vector<bool> visited(numVertices, false);
-		visited[source] = true;
-		pq.push(std::make_pair(0, source));
-		while (!pq.empty())
-		{
-			auto top = pq.top();
-			int u = top.second;
-			visited[u] = true;
-			pq.pop();
-			for (int j = 0; j < mesh->verts[u]->vertList.size(); ++j)
-			{
-				int v = mesh->verts[u]->vertList[j];
-				auto v1 = mesh->verts[u]->coords;
-				auto v2 = mesh->verts[v]->coords;
-				float weight = sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
-					(v1[1] - v2[1]) * (v1[1] - v2[1]) +
-					(v1[2] - v2[2]) * (v1[2] - v2[2]));
-				if (!visited[v] && (dist[v] > dist[u] + weight))
-				{
-					dist[v] = dist[u] + weight;
-					pq.push(make_pair(dist[v], v));
-					parent[v] = u;
-				}
-			}
-		}
-		distances[i] = dist;
-		parents[i] = parent;
-	}
-	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
-	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Min heap: " << duration << endl;
-#pragma endregion 
-	
 #pragma region array
 	/*
 	distances.clear();
@@ -181,8 +113,52 @@ int main(int, char ** argv)
 	*/
 #pragma endregion 
 
+#pragma region minHeap
+	std::vector<std::vector<float>> distances(numVertices);
+	std::vector<std::vector<int>> parents(numVertices);
+	chrono::high_resolution_clock::time_point t0 = chrono::high_resolution_clock::now();
+	for (int i = 0; i < numVertices; ++i) {
+		std::priority_queue<std::pair<float, int>, std::vector<std::pair<float, int>>, std::greater<>> pq;
+		int source = i;
+		std::vector<int> parent(numVertices, -1);
+		parent[source] = source;
+		std::vector<float> dist(numVertices, FLT_MAX);
+		dist[source] = 0;
+		std::vector<bool> visited(numVertices, false);
+		visited[source] = true;
+		pq.push(std::make_pair(0, source));
+		while (!pq.empty())
+		{
+			auto top = pq.top();
+			int u = top.second;
+			visited[u] = true;
+			pq.pop();
+			for (int j = 0; j < mesh->verts[u]->vertList.size(); ++j)
+			{
+				int v = mesh->verts[u]->vertList[j];
+				auto v1 = mesh->verts[u]->coords;
+				auto v2 = mesh->verts[v]->coords;
+				float weight = sqrt((v1[0] - v2[0]) * (v1[0] - v2[0]) +
+					(v1[1] - v2[1]) * (v1[1] - v2[1]) +
+					(v1[2] - v2[2]) * (v1[2] - v2[2]));
+				if (!visited[v] && (dist[v] > dist[u] + weight))
+				{
+					dist[v] = dist[u] + weight;
+					pq.push(make_pair(dist[v], v));
+					parent[v] = u;
+				}
+			}
+		}
+		distances[i] = dist;
+		parents[i] = parent;
+	}
+	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Min heap: " << duration << endl;
+#pragma endregion 
+	
 	FILE * pFile;
-	pFile = fopen("out.txt", "w");
+	pFile = fopen("dijkstra_out.txt", "w");
 
 	for(int i = 0; i < numVertices; ++i)
 	{
@@ -194,7 +170,8 @@ int main(int, char ** argv)
 	}
 	fclose(pFile);
 
-	int p1 = 0, p2 = 200;
+	//int p1 = 0, p2 = 200;
+	int p1 = -1, p2 = -1;
 	while (p1 < 0 || p1 >= numVertices) {
 		cout << "Enter first vertex index, [0," << numVertices - 1 << "] :";
 		cin >> p1;
@@ -255,7 +232,6 @@ int main(int, char ** argv)
 					minIndex = fpsVertices[j];
 				}
 			}
-			//cout << "Min index is: " << minIndex << " with distance: " << minDist;
 			if (minIndex != -1) {
 				associations.push_back(make_pair(i, minIndex));
 			}		// pair.first is in the elements to be sampled, pair.second are already sampled
@@ -269,7 +245,6 @@ int main(int, char ** argv)
 				maxGeoDist = distances[associations[i].first][associations[i].second];
 			}
 		}
-		//cout << "Sampled index is: " << maxIndex << " with distance: " << maxDist << endl;
 		fpsVertices.push_back(maxIndex);
 	}
 	mesh->samples = fpsVertices;
@@ -277,6 +252,7 @@ int main(int, char ** argv)
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << endl << "Sampling points: " << duration << endl;
 #pragma endregion
+
 #pragma region geodesic isocurves
 	int seedIndex = -1;
 	while (seedIndex < 0 || seedIndex >= numVertices) {
@@ -376,11 +352,25 @@ int main(int, char ** argv)
 		}
 	}
 	root->addChild( painter->getShapeSep(mesh) );
-	//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
-	//root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
+	int visualization = -1;
+	while (visualization <= 0 || visualization > 3) {
+		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling :";
+		cin >> visualization;
+		if (visualization <= 0 || visualization > 3) {
+			cout << "Invalid visualization query, try again: " << endl;
+		}
+	}
+	if(visualization == 1){
+		root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
+	}
+	else if(visualization == 2){
+		root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
+	}
+	else if (visualization == 3) {
+		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
+	}
 	
-	root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
-
+	
 	viewer->setSize(SbVec2s(800, 600));
 	viewer->setSceneGraph(root);
 	viewer->show();
