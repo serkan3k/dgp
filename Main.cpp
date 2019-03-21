@@ -273,6 +273,7 @@ int main(int, char ** argv)
 		//cout << "Sampled index is: " << maxIndex << " with distance: " << maxDist << endl;
 		fpsVertices.push_back(maxIndex);
 	}
+	mesh->samples = fpsVertices;
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << endl << "Sampling points: " << duration << endl;
@@ -368,7 +369,7 @@ int main(int, char ** argv)
 	std::cout << endl << "Geodesic isocurve: " << duration << endl;
 #pragma endregion
 	root->addChild( painter->getShapeSep(mesh) );
-
+	root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
 	SoSeparator *sphereRoot = new SoSeparator;
 	SoTransform *sphereTransform = new SoTransform;
 	sphereTransform->translation.setValue(17., 17., 0.);

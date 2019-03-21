@@ -52,7 +52,7 @@ public:
 	vector< Vertex* > verts;
 	vector< Triangle* > tris;
 	vector< Edge* > edges;
-
+	vector<int> samples;
 
 	Mesh() {} ;
 	void createCube(float side);

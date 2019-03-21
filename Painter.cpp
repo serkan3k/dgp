@@ -59,6 +59,51 @@ SoSeparator* Painter::getShapeSep(Mesh* mesh)
 	return res;
 }
 
+SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, float scale)
+{
+	//returns a set of spheres to highlight each mesh.samples[i]
+
+	SoSeparator* spheresSep = new SoSeparator();
+
+	float radius = 2.0f;
+
+	for (int i = 0; i < (int)mesh->samples.size(); i++)
+	{
+		//1 sphere for this sample
+		SoSeparator* sphere1Sep = new SoSeparator;
+
+		//transformation
+		SoTransform* tra = new SoTransform();
+		tra->translation.setValue(scale*mesh->verts[mesh->samples[i]]->coords[0] + deltaX, scale*mesh->verts[mesh->samples[i]]->coords[1] + deltaY, scale*mesh->verts[mesh->samples[i]]->coords[2]);
+		sphere1Sep->addChild(tra);
+
+		//material
+		SoMaterial* ma = new SoMaterial;
+		if (i == 0)
+			ma->diffuseColor.setValue(SbColor(0.0f, 0.0f, 0.7f));
+		else if (i == 1)
+			ma->diffuseColor.setValue(SbColor(0.0f, 0.0f, 0.0f));
+		else if (i == 2)
+			ma->diffuseColor.setValue(SbColor(0.0f, 0.7f, 0.0f));
+		else if (i == 3)
+			ma->diffuseColor.setValue(SbColor(0.7f, 0.0f, 0.7f));
+		else if (i == 4)
+			ma->diffuseColor.setValue(SbColor(0.7f, 0.7f, 0.0f));
+		else
+			ma->diffuseColor.setValue(SbColor(0.7f, 0.0f, 0.0f));
+
+		sphere1Sep->addChild(ma);
+
+		//shape
+		SoSphere* sph1 = new SoSphere();
+		sph1->radius = radius;
+		sphere1Sep->addChild(sph1); //whose position is decided by the translation applied above
+
+		spheresSep->addChild(sphere1Sep);
+	}
+
+	return spheresSep;
+}
 
 
 /* stuff below are from my old projects; should run fine and be useful in your development
@@ -163,49 +208,5 @@ SoSeparator* Painter::getPointsSep(Mesh* mesh, SbColor c)
 	return pntsSep;
 }
 
-SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, float scale)
-{
-	//returns a set of spheres to highlight each mesh.samples[i]
 
-	SoSeparator* spheresSep = new SoSeparator();
-
-	float radius = 50.0f;
-
-	for (int i = 0; i < (int) mesh->samples.size(); i++)
-	{
-		//1 sphere for this sample
-		SoSeparator* sphere1Sep = new SoSeparator;
-
-		//transformation
-		SoTransform* tra = new SoTransform();
-		tra->translation.setValue(scale*mesh->verts[ mesh->samples[i] ]->coords[0]+deltaX, scale*mesh->verts[ mesh->samples[i] ]->coords[1]+deltaY, scale*mesh->verts[ mesh->samples[i] ]->coords[2]);
-		sphere1Sep->addChild(tra);
-
-		//material
-		SoMaterial* ma = new SoMaterial;
-		if (i == 0)
-			ma->diffuseColor.setValue(SbColor(0.0f, 0.0f, 0.7f));
-		else if (i == 1)
-			ma->diffuseColor.setValue(SbColor(0.0f, 0.0f, 0.0f));
-		else if (i == 2)
-			ma->diffuseColor.setValue(SbColor(0.0f, 0.7f, 0.0f));
-		else if (i == 3)
-			ma->diffuseColor.setValue(SbColor(0.7f, 0.0f, 0.7f));
-		else if (i == 4)
-			ma->diffuseColor.setValue(SbColor(0.7f, 0.7f, 0.0f));
-		else
-			ma->diffuseColor.setValue(SbColor(0.7f, 0.0f, 0.0f));
-
-		sphere1Sep->addChild(ma);
-
-		//shape
-		SoSphere* sph1 = new SoSphere();
-		sph1->radius = radius;
-		sphere1Sep->addChild(sph1); //whose position is decided by the translation applied above
-
-		spheresSep->addChild(sphere1Sep);
-	}
-	
-	return spheresSep;
-}
 */

@@ -8,6 +8,9 @@
 #include <Inventor/nodes/SoIndexedFaceSet.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoShapeHints.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoSphere.h>
+
 //#include <Inventor/nodes/SoCone.h>
 
 #include "Mesh.h"
@@ -17,4 +20,5 @@ class Painter
 {
 public:
 	SoSeparator* getShapeSep(Mesh* mesh);
+	SoSeparator * getSpheresSep(Mesh * mesh, float deltaX, float deltaY, float scale);
 };
