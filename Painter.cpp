@@ -167,6 +167,12 @@ SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shorte
 	return thickEdgeSep;
 }
 
+SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
+	const std::vector<std::vector<pair<std::vector<float>, std::vector<float>>>>& isoCurves,
+	const std::vector<float>& histogramBins)
+{
+}
+
 
 /* stuff below are from my old projects; should run fine and be useful in your development
 
