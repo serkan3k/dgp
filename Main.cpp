@@ -262,12 +262,12 @@ int main(int, char ** argv)
 			}		// pair.first is in the elements to be sampled, pair.second are already sampled
 		}
 		// get the argmax out of all
-		float maxDist = FLT_MIN;
+		float maxGeoDist = FLT_MIN;
 		int maxIndex = -1;
 		for (int i = 0; i < associations.size(); ++i) {
-			if (distances[associations[i].first][associations[i].second] > maxDist) {
+			if (distances[associations[i].first][associations[i].second] > maxGeoDist) {
 				maxIndex = associations[i].first;
-				maxDist = distances[associations[i].first][associations[i].second];
+				maxGeoDist = distances[associations[i].first][associations[i].second];
 			}
 		}
 		//cout << "Sampled index is: " << maxIndex << " with distance: " << maxDist << endl;
@@ -370,7 +370,7 @@ int main(int, char ** argv)
 #pragma endregion
 	root->addChild( painter->getShapeSep(mesh) );
 	root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
-	SoSeparator *sphereRoot = new SoSeparator;
+	/*SoSeparator *sphereRoot = new SoSeparator;
 	SoTransform *sphereTransform = new SoTransform;
 	sphereTransform->translation.setValue(17., 17., 0.);
 	sphereTransform->scaleFactor.setValue(8., 8., 8.);
@@ -380,7 +380,7 @@ int main(int, char ** argv)
 	sphereMaterial->diffuseColor.setValue(.8, .8, .8);
 	sphereRoot->addChild(sphereMaterial);
 	sphereRoot->addChild(new SoSphere);
-	root->addChild(sphereRoot);
+	root->addChild(sphereRoot);*/
 
 	viewer->setSize(SbVec2s(640, 480));
 	viewer->setSceneGraph(root);
