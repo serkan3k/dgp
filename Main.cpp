@@ -33,6 +33,7 @@ int main(int, char ** argv)
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
+	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
 #pragma region dijkstraQuery
 	
 	int dijkstraQueryFirst = -1;
@@ -109,7 +110,7 @@ int main(int, char ** argv)
 	}
 	t1 = chrono::high_resolution_clock::now();
 	duration= chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Array: " << duration << endl;
+	std::cout << "Array: " << duration << " seconds"  << endl;
 	*/
 #pragma endregion 
 
@@ -154,7 +155,7 @@ int main(int, char ** argv)
 	}
 	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Min heap: " << duration << endl;
+	std::cout << "Min heap: " << duration << " seconds" << endl;
 #pragma endregion 
 	
 	FILE * pFile;
@@ -173,14 +174,14 @@ int main(int, char ** argv)
 	//int p1 = 0, p2 = 200;
 	int p1 = -1, p2 = -1;
 	while (p1 < 0 || p1 >= numVertices) {
-		cout << "Enter first vertex index, [0," << numVertices - 1 << "] :";
+		cout << "Enter first vertex index for query, [0," << numVertices - 1 << "] :";
 		cin >> p1;
 		if (p1 < 0 || p1 >= numVertices) {
 			cout << "Invalid index, try again: ";
 		}
 	}
 	while (p2 < 0 || p2 >= numVertices) {
-		cout << "Enter second vertex index, [0," << numVertices - 1 << "] :";
+		cout << "Enter second vertex index for query, [0," << numVertices - 1 << "] :";
 		cin >> p2;
 		if (p2 < 0 || p2 >= numVertices) {
 			cout << "Invalid index, try again: ";
@@ -194,11 +195,13 @@ int main(int, char ** argv)
 		p2Parent = parents[p1][p2Parent];
 	}
 	shortestPathVertices.push_back(p1);	// add source node
+	cout << "Shortest path vertices for queried indices " << p1 << ", " << p2 << endl;
 	for(const auto &spv:shortestPathVertices){
 		cout << spv << " ";
 	}
 	cout << endl;
 #pragma region fps
+	cout << "------------------" << endl << "FPS" << endl << "------------------" << endl;
 	t0 = chrono::high_resolution_clock::now();
 	std::vector<int> fpsVertices;
 	int randomIndex = rand() % numVertices;
@@ -212,9 +215,11 @@ int main(int, char ** argv)
 		}
 	}
 	fpsVertices.push_back(maxDistIndex);
+	cout << "Random seed and farthest vertex to it are: ";
 	for (int i = 0; i < fpsVertices.size(); ++i) {
 		cout << fpsVertices[i] << " ";
 	}
+	cout << endl;
 	const int numSamples = 100;
 	while (fpsVertices.size() < numSamples) {
 		std::vector<pair<int, int>> associations;	// which vertex is associated with whom	(i, j)
@@ -250,10 +255,11 @@ int main(int, char ** argv)
 	mesh->samples = fpsVertices;
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << endl << "Sampling points: " << duration << endl;
+	std::cout << endl << "Sampling points: " << duration << " seconds" << endl;
 #pragma endregion
 
 #pragma region geodesic isocurves
+	cout << "------------------" << endl << "Geodesic Isocurves" << endl << "------------------" << endl;
 	int seedIndex = -1;
 	while (seedIndex < 0 || seedIndex >= numVertices) {
 		cout << "Enter the seed index, [0," << numVertices - 1 << "] :";
@@ -341,7 +347,7 @@ int main(int, char ** argv)
 	}
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << endl << "Geodesic isocurve: " << duration << endl;
+	std::cout << endl << "Geodesic isocurve: " << duration << " seconds " << endl;
 #pragma endregion
 	float globalMaxDist = FLT_MIN;
 	for (int i = 0; i < distances.size(); ++i) {
