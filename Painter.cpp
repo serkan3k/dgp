@@ -112,7 +112,7 @@ SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shorte
 	SoMaterial* ma = new SoMaterial;
 	ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
 	thickEdgeSep->addChild(ma);
-	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 2.5f;	thickEdgeSep->addChild(sty);
+	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 3.0f;	thickEdgeSep->addChild(sty);
 
 	//shape
 	SoIndexedLineSet* ils = new SoIndexedLineSet;
@@ -179,7 +179,7 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 		SoMaterial* ma = new SoMaterial;
 		ma->diffuseColor.set1Value(0, 0.0f, 0.0f, 0.0f);
 		thickEdgeSep->addChild(ma);
-		SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 2.5f;	thickEdgeSep->addChild(sty);
+		SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 3.0f;	thickEdgeSep->addChild(sty);
 
 		//shape
 		SoIndexedLineSet* ils = new SoIndexedLineSet;
@@ -212,12 +212,26 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 	sphereTransform->scaleFactor.setValue(1, 1, 1);
 	sphere1SepStart->addChild(sphereTransform);
 	auto sphereMaterial = new SoMaterial;
-	sphereMaterial->diffuseColor.setValue(0.0f, 1.0f, 0.0f);
+	// COLOR THE SEED VERTEX
+	float distanceTotal = 0;
+	float maxDist = FLT_MIN;
+	for (unsigned int i = 0; i < histogramBins.size(); ++i) {
+		if (histogramBins[i] > maxDist) {
+			maxDist = histogramBins[i];
+		}
+		distanceTotal += histogramBins[i];
+	}
+	distanceTotal /= (float)histogramBins.size();
+	float rColor = distanceTotal / maxDist;	// red color is normalized value w.r.t. max histogram value
+	sphereMaterial->diffuseColor.setValue(rColor, 0.0f, 0.0f);
+	// COLOR THE SEED VERTEX
 	sphere1SepStart->addChild(sphereMaterial);
 	SoSphere* sph1 = new SoSphere();
 	sph1->radius = 2.0f;
 	sphere1SepStart->addChild(sph1);
 	res->addChild(sphere1SepStart);
+
+
 	return res;
 }
 

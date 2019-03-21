@@ -367,9 +367,18 @@ int main(int, char ** argv)
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << endl << "Geodesic isocurve: " << duration << endl;
 #pragma endregion
+	float globalMaxDist = FLT_MIN;
+	for (int i = 0; i < distances.size(); ++i) {
+		for (int j = 0; j < distances[i].size(); ++j) {
+			if (distances[i][j] > globalMaxDist) {
+				globalMaxDist = distances[i][j];
+			}
+		}
+	}
 	root->addChild( painter->getShapeSep(mesh) );
 	//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
 	//root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
+	
 	root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
 
 	viewer->setSize(SbVec2s(800, 600));
