@@ -370,9 +370,9 @@ int main(int, char ** argv)
 	root->addChild( painter->getShapeSep(mesh) );
 	//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
 	//root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
-	root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins));
+	root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
 
-	viewer->setSize(SbVec2s(640, 480));
+	viewer->setSize(SbVec2s(800, 600));
 	viewer->setSceneGraph(root);
 	viewer->show();
 

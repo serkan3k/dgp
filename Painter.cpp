@@ -112,7 +112,7 @@ SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shorte
 	SoMaterial* ma = new SoMaterial;
 	ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
 	thickEdgeSep->addChild(ma);
-	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 5.0f;	thickEdgeSep->addChild(sty);
+	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 2.5f;	thickEdgeSep->addChild(sty);
 
 	//shape
 	SoIndexedLineSet* ils = new SoIndexedLineSet;
@@ -169,7 +169,7 @@ SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shorte
 
 SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 	const std::vector<std::vector<pair<std::vector<float>, std::vector<float>>>>& isoCurves,
-	const std::vector<float>& histogramBins)
+	const std::vector<float>& histogramBins, const int seedVertex)
 {
 	SoSeparator* res = new SoSeparator();
 	for (int i = 0; i < isoCurves.size(); ++i) {
@@ -177,9 +177,9 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 		SoSeparator* thickEdgeSep = new SoSeparator;
 		//material
 		SoMaterial* ma = new SoMaterial;
-		ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
+		ma->diffuseColor.set1Value(0, 0.0f, 0.0f, 0.0f);
 		thickEdgeSep->addChild(ma);
-		SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 5.0f;	thickEdgeSep->addChild(sty);
+		SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 2.5f;	thickEdgeSep->addChild(sty);
 
 		//shape
 		SoIndexedLineSet* ils = new SoIndexedLineSet;
@@ -202,6 +202,22 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 		thickEdgeSep->addChild(co);	thickEdgeSep->addChild(ils);
 		res->addChild(thickEdgeSep);
 	}
+
+	SoSeparator* sphere1SepStart = new SoSeparator;
+	SoTransform *sphereTransform = new SoTransform;
+	sphereTransform->translation.setValue(
+		mesh->verts[seedVertex]->coords[0],
+		mesh->verts[seedVertex]->coords[1],
+		mesh->verts[seedVertex]->coords[2]);
+	sphereTransform->scaleFactor.setValue(1, 1, 1);
+	sphere1SepStart->addChild(sphereTransform);
+	auto sphereMaterial = new SoMaterial;
+	sphereMaterial->diffuseColor.setValue(0.0f, 1.0f, 0.0f);
+	sphere1SepStart->addChild(sphereMaterial);
+	SoSphere* sph1 = new SoSphere();
+	sph1->radius = 2.0f;
+	sphere1SepStart->addChild(sph1);
+	res->addChild(sphere1SepStart);
 	return res;
 }
 
