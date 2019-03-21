@@ -171,6 +171,38 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 	const std::vector<std::vector<pair<std::vector<float>, std::vector<float>>>>& isoCurves,
 	const std::vector<float>& histogramBins)
 {
+	SoSeparator* res = new SoSeparator();
+	for (int i = 0; i < isoCurves.size(); ++i) {
+		if (isoCurves[i].size() == 0) continue;
+		SoSeparator* thickEdgeSep = new SoSeparator;
+		//material
+		SoMaterial* ma = new SoMaterial;
+		ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
+		thickEdgeSep->addChild(ma);
+		SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 5.0f;	thickEdgeSep->addChild(sty);
+
+		//shape
+		SoIndexedLineSet* ils = new SoIndexedLineSet;
+		SoCoordinate3* co = new SoCoordinate3;
+
+		//assumes no edge in sedges is removed
+		for (int j = 0; j < isoCurves[i].size() - 1; ++j) {
+			SbVec3f end1;// = isoCurves[i][j];//mesh->verts[shortestPathVertices[i]]->coords;
+			end1.setValue(isoCurves[i][j].first[0], isoCurves[i][j].first[1], isoCurves[i][j].first[2]);
+			SbVec3f end2; // = //mesh->verts[shortestPathVertices[i + 1]]->coords;
+			end2.setValue(isoCurves[i][j].second[0], isoCurves[i][j].second[1], isoCurves[i][j].second[2]);
+			co->point.set1Value(2 * j, end1);
+			co->point.set1Value(2 * j + 1, end2);
+		}
+		for (int j = 0; j < isoCurves[i].size() - 1; ++j) {
+			ils->coordIndex.set1Value(3 * j, 2 * j);
+			ils->coordIndex.set1Value(3 * j + 1, 2 * j + 1);
+			ils->coordIndex.set1Value(3 * j + 2, -1);
+		}
+		thickEdgeSep->addChild(co);	thickEdgeSep->addChild(ils);
+		res->addChild(thickEdgeSep);
+	}
+	return res;
 }
 
 
