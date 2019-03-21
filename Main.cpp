@@ -16,8 +16,8 @@
 #include <cstring>
 #include <queue>
 #include <chrono>
+#include <functional>
 
-//std::vector<int> getFarthestPointSamplePoints(std::vector<int> &dist, int numberOfPoints,)
 
 int main(int, char ** argv)
 {
