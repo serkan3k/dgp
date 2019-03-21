@@ -105,6 +105,35 @@ SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, floa
 	return spheresSep;
 }
 
+SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shortestPathVertices)
+{
+	SoSeparator* thickEdgeSep = new SoSeparator;
+	//material
+	SoMaterial* ma = new SoMaterial;
+	ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
+	thickEdgeSep->addChild(ma);
+	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 10.0f;	thickEdgeSep->addChild(sty);
+
+	//shape
+	SoIndexedLineSet* ils = new SoIndexedLineSet;
+	SoCoordinate3* co = new SoCoordinate3;
+
+	//assumes no edge in sedges is removed
+	for(int i = 0; i < shortestPathVertices.size() - 1; ++i){
+		SbVec3f end1 = mesh->verts[shortestPathVertices[i]]->coords;
+		SbVec3f end2 = mesh->verts[shortestPathVertices[i + 1]]->coords;
+		co->point.set1Value(2 * i, end1);
+		co->point.set1Value(2 * i + 1, end2);
+	}
+	for(int i = 0; i < shortestPathVertices.size()-1; ++i){
+		ils->coordIndex.set1Value(3 * i, 2 * i);
+		ils->coordIndex.set1Value(3 * i + 1, 2 * i + 1);
+		ils->coordIndex.set1Value(3 * i + 2, -1);
+	}
+	thickEdgeSep->addChild(co);	thickEdgeSep->addChild(ils);
+	return thickEdgeSep;
+}
+
 
 /* stuff below are from my old projects; should run fine and be useful in your development
 

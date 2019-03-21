@@ -221,6 +221,7 @@ int main(int, char ** argv)
 		cout << spv << " ";
 	}
 	cout << endl;
+	
 
 #pragma region fps
 	t0 = chrono::high_resolution_clock::now();
@@ -369,7 +370,9 @@ int main(int, char ** argv)
 	std::cout << endl << "Geodesic isocurve: " << duration << endl;
 #pragma endregion
 	root->addChild( painter->getShapeSep(mesh) );
-	root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+	//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+	root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));
+
 	/*SoSeparator *sphereRoot = new SoSeparator;
 	SoTransform *sphereTransform = new SoTransform;
 	sphereTransform->translation.setValue(17., 17., 0.);

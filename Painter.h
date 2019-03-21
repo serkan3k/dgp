@@ -10,7 +10,9 @@
 #include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoSphere.h>
-
+#include <Inventor/Win/viewers/SoWinExaminerViewer.h>
+#include <Inventor/nodes/SoDrawStyle.h>
+#include <Inventor/nodes/SoIndexedLineSet.h>
 //#include <Inventor/nodes/SoCone.h>
 
 #include "Mesh.h"
@@ -21,4 +23,5 @@ class Painter
 public:
 	SoSeparator* getShapeSep(Mesh* mesh);
 	SoSeparator * getSpheresSep(Mesh * mesh, float deltaX, float deltaY, float scale);
+	SoSeparator * getShortestPathSep(Mesh * mesh, const vector<int> &shortestPathVertices);
 };
