@@ -112,7 +112,7 @@ SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shorte
 	SoMaterial* ma = new SoMaterial;
 	ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
 	thickEdgeSep->addChild(ma);
-	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 10.0f;	thickEdgeSep->addChild(sty);
+	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 5.0f;	thickEdgeSep->addChild(sty);
 
 	//shape
 	SoIndexedLineSet* ils = new SoIndexedLineSet;
@@ -131,6 +131,39 @@ SoSeparator * Painter::getShortestPathSep(Mesh * mesh, const vector<int> &shorte
 		ils->coordIndex.set1Value(3 * i + 2, -1);
 	}
 	thickEdgeSep->addChild(co);	thickEdgeSep->addChild(ils);
+
+	SoSeparator* sphere1SepStart = new SoSeparator;	
+	SoTransform *sphereTransform = new SoTransform;
+	sphereTransform->translation.setValue(
+		mesh->verts[shortestPathVertices[0]]->coords[0], 
+		mesh->verts[shortestPathVertices[0]]->coords[1], 
+		mesh->verts[shortestPathVertices[0]]->coords[2]);
+	sphereTransform->scaleFactor.setValue(1, 1, 1);
+	sphere1SepStart->addChild(sphereTransform);
+	auto sphereMaterial = new SoMaterial;
+	sphereMaterial->diffuseColor.setValue(0.0f, 1.0f, 0.0f);
+	sphere1SepStart->addChild(sphereMaterial);
+	SoSphere* sph1 = new SoSphere();
+	sph1->radius = 2.0f;
+	sphere1SepStart->addChild(sph1);
+	
+	SoSeparator* sphere1SepEnd = new SoSeparator;
+	SoTransform *sphereTransformEnd = new SoTransform;
+	sphereTransformEnd->translation.setValue(
+		mesh->verts[shortestPathVertices[shortestPathVertices.size()-1]]->coords[0], 
+		mesh->verts[shortestPathVertices[shortestPathVertices.size() - 1]]->coords[1],
+		mesh->verts[shortestPathVertices[shortestPathVertices.size() - 1]]->coords[2]);
+	sphereTransformEnd->scaleFactor.setValue(1, 1, 1);
+	sphere1SepEnd->addChild(sphereTransformEnd);
+	auto sphereMaterialEnd = new SoMaterial;
+	sphereMaterialEnd->diffuseColor.setValue(0.0f, 1.0f, 0.0f);
+	sphere1SepEnd->addChild(sphereMaterialEnd);
+	SoSphere* sph2 = new SoSphere();
+	sph2->radius = 2.0f;
+	sphere1SepEnd->addChild(sph2);
+
+	thickEdgeSep->addChild(sphere1SepStart);
+	thickEdgeSep->addChild(sphere1SepEnd);
 	return thickEdgeSep;
 }
 
