@@ -221,8 +221,6 @@ int main(int, char ** argv)
 		cout << spv << " ";
 	}
 	cout << endl;
-	
-
 #pragma region fps
 	t0 = chrono::high_resolution_clock::now();
 	std::vector<int> fpsVertices;
@@ -307,7 +305,7 @@ int main(int, char ** argv)
 	int numTris = mesh->tris.size();
 	auto triangles = mesh->tris;
 	std::vector<float> histogramBins(k);
-	std::vector<pair<std::vector<float>, std::vector<float>>> isoCurveLines;
+	std::vector<std::vector<pair<std::vector<float>, std::vector<float>>>> isoCurveLines(k);
 	for(int i = 1; i <= k; ++i){
 		float radius = i * d;
 		float isoCurveLength = 0.0f;
@@ -361,7 +359,7 @@ int main(int, char ** argv)
 								(p1[1] - p2[1]) * (p1[1] - p2[1]) + 
 								(p1[2] - p2[2]) * (p1[2] - p2[2]));
 			isoCurveLength += p1p2dist;
-			isoCurveLines.push_back(make_pair(p1, p2));
+			isoCurveLines[i - 1].push_back(make_pair(p1, p2));
 		}
 		histogramBins[i - 1] = isoCurveLength;
 	}
@@ -370,20 +368,9 @@ int main(int, char ** argv)
 	std::cout << endl << "Geodesic isocurve: " << duration << endl;
 #pragma endregion
 	root->addChild( painter->getShapeSep(mesh) );
-	//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
-	root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));
+	//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
+	root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
 
-	/*SoSeparator *sphereRoot = new SoSeparator;
-	SoTransform *sphereTransform = new SoTransform;
-	sphereTransform->translation.setValue(17., 17., 0.);
-	sphereTransform->scaleFactor.setValue(8., 8., 8.);
-	sphereRoot->addChild(sphereTransform);
-
-	auto sphereMaterial = new SoMaterial;
-	sphereMaterial->diffuseColor.setValue(.8, .8, .8);
-	sphereRoot->addChild(sphereMaterial);
-	sphereRoot->addChild(new SoSphere);
-	root->addChild(sphereRoot);*/
 
 	viewer->setSize(SbVec2s(640, 480));
 	viewer->setSceneGraph(root);
