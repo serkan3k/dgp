@@ -65,7 +65,8 @@ SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, floa
 
 	SoSeparator* spheresSep = new SoSeparator();
 
-	float radius = 2.0f;
+	float radius = 0.25f;
+	//float radius = 2.0f;
 
 	for (int i = 0; i < (int)mesh->samples.size(); i++)
 	{

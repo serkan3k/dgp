@@ -17,6 +17,7 @@
 #include <queue>
 #include <chrono>
 #include <functional>
+#include <set>
 
 
 int main(int, char ** argv)
@@ -33,6 +34,39 @@ int main(int, char ** argv)
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
+	std::vector<int> boundaryIndices;
+	const int numEdges = mesh->edges.size();
+	const int numTris = mesh->tris.size();
+	// find the boundary vertices
+	// find the boundary edges, store them in a std::set<int> data structure
+	std::set<int> boundaryVertices;
+	auto edges = mesh->edges;
+	auto tris = mesh->tris;
+	auto verts = mesh->verts;
+	for(int i = 0; i < numEdges; ++i)
+	{
+		int belongsTo = 0;
+		for(int j = 0; j < numTris; ++j)
+		{
+			if( tris[j]->v1i == edges[i]->v1i || tris[j]->v1i == edges[i]->v2i ||
+				tris[j]->v2i == edges[i]->v1i || tris[j]->v2i == edges[i]->v2i ||
+				tris[j]->v3i == edges[i]->v1i || tris[j]->v3i == edges[i]->v2i)
+			{
+				belongsTo++;
+				;
+			}
+		}
+		if(belongsTo <=6 )
+		{
+			boundaryVertices.insert(edges[i]->v1i);
+			boundaryVertices.insert(edges[i]->v2i);
+		}
+	}
+	for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
+	{
+		boundaryIndices.push_back(*it);
+	}
+	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
 #pragma region dijkstraQuery
 	
@@ -55,7 +89,7 @@ int main(int, char ** argv)
 	cout << dijkstraQueryFirst << " " << dijkstraQuerySecond << endl;
 	
 #pragma endregion 
-
+*/
 #pragma region array
 	/*
 	distances.clear();
@@ -113,7 +147,7 @@ int main(int, char ** argv)
 	std::cout << "Array: " << duration << " seconds"  << endl;
 	*/
 #pragma endregion 
-
+	/*
 #pragma region minHeap
 	std::vector<std::vector<float>> distances(numVertices);
 	std::vector<std::vector<int>> parents(numVertices);
@@ -357,6 +391,7 @@ int main(int, char ** argv)
 			}
 		}
 	}
+	*/
 	root->addChild( painter->getShapeSep(mesh) );
 	int visualization = -1;
 	while (visualization <= 0 || visualization > 3) {
@@ -367,12 +402,13 @@ int main(int, char ** argv)
 		}
 	}
 	if(visualization == 1){
-		root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
+		//root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
 	}
 	else if(visualization == 2){
-		root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
+		//root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
 	}
 	else if (visualization == 3) {
+		mesh->samples = boundaryIndices;
 		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
 	}
 	
