@@ -28,8 +28,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("0.off") + 1); 
-	strcpy(x, "0.off");
+	char* x = (char*)malloc(strlen("face-low.off") + 1); 
+	strcpy(x, "face-low.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
