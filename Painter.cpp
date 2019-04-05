@@ -215,14 +215,20 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 	// COLOR THE SEED VERTEX
 	float distanceTotal = 0;
 	float maxDist = FLT_MIN;
+	float minDist = FLT_MAX;
 	for (unsigned int i = 0; i < histogramBins.size(); ++i) {
+		if (histogramBins[i] == 0) continue;
 		if (histogramBins[i] > maxDist) {
 			maxDist = histogramBins[i];
+		}
+		if (histogramBins[i] < minDist) {
+			minDist = histogramBins[i];
 		}
 		distanceTotal += histogramBins[i];
 	}
 	distanceTotal /= (float)histogramBins.size();
-	float rColor = distanceTotal / maxDist;	// red color is normalized value w.r.t. max histogram value
+	float rColor = (distanceTotal -minDist) / (maxDist - minDist);	// red color is normalized value w.r.t. max histogram value
+	if (distanceTotal < minDist) rColor = 0.0f;
 	sphereMaterial->diffuseColor.setValue(rColor, 0.0f, 0.0f);
 	// COLOR THE SEED VERTEX
 	sphere1SepStart->addChild(sphereMaterial);
