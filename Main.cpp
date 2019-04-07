@@ -48,19 +48,21 @@ int main(int, char ** argv)
 		int belongsTo = 0;
 		for(int j = 0; j < numTris; ++j)
 		{
-			if( tris[j]->v1i == edges[i]->v1i || tris[j]->v1i == edges[i]->v2i ||
-				tris[j]->v2i == edges[i]->v1i || tris[j]->v2i == edges[i]->v2i ||
-				tris[j]->v3i == edges[i]->v1i || tris[j]->v3i == edges[i]->v2i)
+			// add continue if found!
+			if(edges[i]->v1i == tris[j]->v1i)
 			{
-				belongsTo++;
-				;
+				// v2, v3
+			}
+			else if(edges[i]->v1i == tris[j]->v2i)
+			{
+				// v1, v3
+			}
+			else if(edges[i]->v1i == tris[j]->v3i)
+			{
+				// v1, v2
 			}
 		}
-		if(belongsTo <=6 )
-		{
-			boundaryVertices.insert(edges[i]->v1i);
-			boundaryVertices.insert(edges[i]->v2i);
-		}
+		
 	}
 	for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
 	{
