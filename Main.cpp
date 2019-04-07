@@ -18,6 +18,7 @@
 #include <chrono>
 #include <functional>
 #include <set>
+#include <math.h>
 
 
 int main(int, char ** argv)
@@ -29,89 +30,78 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("face-low.off") + 1); 
-	strcpy(x, "face-low.off");
+	char* x = (char*)malloc(strlen("facem.off") + 1); 
+	strcpy(x, "facem.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
 	std::vector<int> boundaryIndices;
+	std::set<int> boundaryVertices;
 	const int numEdges = mesh->edges.size();
 	const int numTris = mesh->tris.size();
-	// find the boundary vertices
-	// find the boundary edges, store them in a std::set<int> data structure
-	std::set<int> boundaryVertices;
-	auto edges = mesh->edges;
-	auto tris = mesh->tris;
-	auto verts = mesh->verts;
-	for(int i = 0; i < numEdges; ++i)
-	{
+	const auto edges = mesh->edges;
+	const auto tris = mesh->tris;
+	const auto verts = mesh->verts;
+	for(int i = 0; i < numEdges; ++i){
 		int belongsTo = 0;
 		const int ev1 = edges[i]->v1i;
 		const int ev2 = edges[i]->v2i;
-		for(int j = 0; j < numTris; ++j)
-		{
+		for(int j = 0; j < numTris; ++j){
 			const int tv1 = tris[j]->v1i;
 			const int tv2 = tris[j]->v2i;
 			const int tv3 = tris[j]->v3i;
-			// add continue if found!
-			if(ev1 == tv1)
-			{
-				if(ev2 == tv2 || ev2 == tv3)
-				{
+			if(ev1 == tv1){
+				if(ev2 == tv2 || ev2 == tv3){
 					belongsTo++;
 					continue;
 				}
 			}
-			else if(ev1 == tv2)
-			{
-				if(ev2 == tv1 || ev2 == tv2)
-				{
+			else if(ev1 == tv2){
+				if(ev2 == tv1 || ev2 == tv2){
 					belongsTo++;
 					continue;
 				}
 			}
-			else if(ev1 == tv3)
-			{
-				if(ev2 == tv1 || ev2 == tv3)
-				{
+			else if(ev1 == tv3){
+				if(ev2 == tv1 || ev2 == tv3){
 					belongsTo++;
 					continue;
 				}
 			}
-			if(ev2 == tv1)
-			{
-				if(ev1 == tv2 || ev1 == tv3)
-				{
+			if(ev2 == tv1){
+				if(ev1 == tv2 || ev1 == tv3){
 					belongsTo++;
 					continue;
 				}
 			}
-			else if(ev2 == tv2)
-			{
-				if(ev1 == tv1 || ev1 == tv3)
-				{
+			else if(ev2 == tv2){
+				if(ev1 == tv1 || ev1 == tv3){
 					belongsTo++;
 					continue;
 				}
 			}
-			else if(ev2 == tv3)
-			{
-				if(ev1 == tv1 || ev1 == tv2)
-				{
+			else if(ev2 == tv3){
+				if(ev1 == tv1 || ev1 == tv2){
 					belongsTo++;
 					continue;
 				}
 			}
 		}
-		if(belongsTo == 1)
-		{
+		if(belongsTo == 1){
 			boundaryVertices.insert(ev1);
 			boundaryVertices.insert(ev2);
 		}
 	}
-	for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
-	{
+	for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it){
 		boundaryIndices.push_back(*it);
+	}
+	std::vector<std::pair<float, float>> diskPoints;
+	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
+	double currentPointAngle = 0;
+	while(currentPointAngle < M_PI * 2.0)
+	{
+		diskPoints.push_back(std::make_pair(std::sin(currentPointAngle), std::cos(currentPointAngle)));
+		currentPointAngle += stepSize;
 	}
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
