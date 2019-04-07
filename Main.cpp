@@ -82,19 +82,16 @@ int main(int, char ** argv)
 			if(ev2 == tv1){
 				if(ev1 == tv2 || ev1 == tv3){
 					belongsTo++;
-					continue;
 				}
 			}
 			else if(ev2 == tv2){
 				if(ev1 == tv1 || ev1 == tv3){
 					belongsTo++;
-					continue;
 				}
 			}
 			else if(ev2 == tv3){
 				if(ev1 == tv1 || ev1 == tv2){
 					belongsTo++;
-					continue;
 				}
 			}
 		}
@@ -113,21 +110,15 @@ int main(int, char ** argv)
 		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
 		currentPointAngle += stepSize;
 	}
-	MatrixXd w(numVertices, numVertices);
-	MatrixXd xx(1, numVertices);
-	MatrixXd bx(1, numVertices);
+	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
+			 xy(numVertices, 1), by(numVertices, 1);
 	int currentDiskPoint = 0;
 	for(int i = 0; i < numVertices; ++i){
-		if(isVertexBoundary[i]){
-			bx(0, i) = diskPoints[currentDiskPoint].first;
-			currentDiskPoint++;
-		}
-		else{
-			bx(0, i) = 0;
-		}
+		bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
+		by(i,0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
+		currentDiskPoint += isVertexBoundary[i];
 	}
-	MatrixXd xy(1, numVertices);
-	MatrixXd by(1, numVertices);
+	currentDiskPoint = 0;
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
 #pragma region dijkstraQuery
