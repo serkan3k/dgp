@@ -23,7 +23,7 @@ int main(int, char ** argv)
 
 	viewer->setSceneGraph(root);
 	viewer->show();
-
+//
 	SoWin::show(window);
 	SoWin::mainLoop();
 	delete viewer;
