@@ -8,7 +8,7 @@
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoMaterial.h>
-#include <Eigen/Dense>
+//#include <Eigen/Dense>
 
 
 #include "Mesh.h"
@@ -19,18 +19,18 @@
 #include <chrono>
 #include <functional>
 #include <set>
-#include <math.h>
+#include <cmath>
 
-using Eigen::MatrixXd;
+//using Eigen::MatrixXd;
 
 int main(int, char ** argv)
 {
-	MatrixXd m(2, 2);
+	/*MatrixXd m(2, 2);
 	m(0, 0) = 3;
 	m(1, 0) = 2.5;
 	m(0, 1) = -1;
 	m(1, 1) = m(1, 0) + m(0, 1);
-	std::cout << m << std::endl;
+	std::cout << m << std::endl;*/
 
 	HWND window = SoWin::init(argv[0]);
 	SoWinExaminerViewer * viewer = new SoWinExaminerViewer(window);
@@ -39,8 +39,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("facem.off") + 1); 
-	strcpy(x, "facem.off");
+	char* x = (char*)malloc(strlen("facem-low.off") + 1); 
+	strcpy(x, "facem-low.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -51,6 +51,7 @@ int main(int, char ** argv)
 	const auto edges = mesh->edges;
 	const auto tris = mesh->tris;
 	const auto verts = mesh->verts;
+	std::vector<bool> isVertexBoundary(numVertices, false);
 	for(int i = 0; i < numEdges; ++i){
 		int belongsTo = 0;
 		const int ev1 = edges[i]->v1i;
@@ -97,13 +98,21 @@ int main(int, char ** argv)
 			}
 		}
 		if(belongsTo == 1){
-			boundaryVertices.insert(ev1);
-			boundaryVertices.insert(ev2);
+			//boundaryVertices.insert(ev1);
+			//boundaryVertices.insert(ev2);
+			if (!isVertexBoundary[ev1]) boundaryIndices.push_back(ev1);
+			if (!isVertexBoundary[ev2]) boundaryIndices.push_back(ev2);
+			isVertexBoundary[ev1] = true;
+			isVertexBoundary[ev2] = true;
 		}
 	}
-	for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it){
-		boundaryIndices.push_back(*it);
-	}
+	//for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it){
+	//	boundaryIndices.push_back(*it);
+	//}
+	//for(int i = 0; i < isVertexBoundary.size(); ++i)
+	//{
+		//if(isVertexBoundary[i]) boundaryIndices.push_back()
+	//}
 	std::vector<std::pair<float, float>> diskPoints;
 	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
 	double currentPointAngle = 0;
