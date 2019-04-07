@@ -20,6 +20,7 @@
 #include <functional>
 #include <set>
 #include <cmath>
+#include <fstream>
 
 //using Eigen::MatrixXd;
 using namespace Eigen;
@@ -124,12 +125,31 @@ int main(int, char ** argv)
 		for (int j = 0; j < numVertices; j++) {
 			if (isVertexBoundary[i]) {
 				w(i, j) = i == j ? 1 : 0;
+				continue;
 			}
-			else {
-
+			if(i == j){
+				w(i, j) = (double)verts[i]->vertList.size() * -1.0;
+				continue;
+			}
+			w(i, j) = 0;
+			for(const auto &k:verts[i]->vertList){
+				 if(k == j){
+					 w(i, j) = 1;
+					 break;
+				 }
 			}
 		}
 	}
+	std::ofstream file("matrices.txt"); 
+
+	file << "bx" << std::endl;
+	file << bx << std::endl;
+	file << "by" << std::endl;
+	file << by << std::endl;
+	file << "w" << std::endl;
+	file << w << std::endl;;
+	file.close();
+
 	currentDiskPoint = 0;
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
