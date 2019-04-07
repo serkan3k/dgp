@@ -46,12 +46,18 @@ int main(int, char ** argv)
 	for(int i = 0; i < numEdges; ++i)
 	{
 		int belongsTo = 0;
+		const int ev1 = edges[i]->v1i;
+		const int ev2 = edges[i]->v2i;
 		for(int j = 0; j < numTris; ++j)
 		{
+			const int tv1 = tris[j]->v1i;
+			const int tv2 = tris[j]->v2i;
+			const int tv3 = tris[j]->v3i;
 			// add continue if found!
-			if(edges[i]->v1i == tris[j]->v1i)
+			if(ev1 == tv1)
 			{
 				// v2, v3
+				//if(edges[i]->v2i == tris[j]->v2i ||)
 			}
 			else if(edges[i]->v1i == tris[j]->v2i)
 			{
