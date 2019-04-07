@@ -117,6 +117,18 @@ int main(int, char ** argv)
 		bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
 		by(i,0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
 		currentDiskPoint += isVertexBoundary[i];
+		xx(i, 0) = 0; xy(i, 0) = 0;
+	}
+	currentDiskPoint = 0;
+	for(int i = 0; i < numVertices; i++){
+		for (int j = 0; j < numVertices; j++) {
+			if (isVertexBoundary[i]) {
+				w(i, j) = i == j ? 1 : 0;
+			}
+			else {
+
+			}
+		}
 	}
 	currentDiskPoint = 0;
 	/*
