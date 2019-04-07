@@ -8,7 +8,7 @@
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoMaterial.h>
-//#include <Eigen/Dense>
+#include <Eigen/Dense>
 
 
 #include "Mesh.h"
@@ -22,6 +22,7 @@
 #include <cmath>
 
 //using Eigen::MatrixXd;
+using namespace Eigen;
 
 int main(int, char ** argv)
 {
@@ -98,29 +99,35 @@ int main(int, char ** argv)
 			}
 		}
 		if(belongsTo == 1){
-			//boundaryVertices.insert(ev1);
-			//boundaryVertices.insert(ev2);
 			if (!isVertexBoundary[ev1]) boundaryIndices.push_back(ev1);
 			if (!isVertexBoundary[ev2]) boundaryIndices.push_back(ev2);
 			isVertexBoundary[ev1] = true;
 			isVertexBoundary[ev2] = true;
 		}
 	}
-	//for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it){
-	//	boundaryIndices.push_back(*it);
-	//}
-	//for(int i = 0; i < isVertexBoundary.size(); ++i)
-	//{
-		//if(isVertexBoundary[i]) boundaryIndices.push_back()
-	//}
 	std::vector<std::pair<float, float>> diskPoints;
 	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
 	double currentPointAngle = 0;
 	while(currentPointAngle < M_PI * 2.0)
 	{
-		diskPoints.push_back(std::make_pair(std::sin(currentPointAngle), std::cos(currentPointAngle)));
+		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
 		currentPointAngle += stepSize;
 	}
+	MatrixXd w(numVertices, numVertices);
+	MatrixXd xx(1, numVertices);
+	MatrixXd bx(1, numVertices);
+	int currentDiskPoint = 0;
+	for(int i = 0; i < numVertices; ++i){
+		if(isVertexBoundary[i]){
+			bx(0, i) = diskPoints[currentDiskPoint].first;
+			currentDiskPoint++;
+		}
+		else{
+			bx(0, i) = 0;
+		}
+	}
+	MatrixXd xy(1, numVertices);
+	MatrixXd by(1, numVertices);
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
 #pragma region dijkstraQuery
