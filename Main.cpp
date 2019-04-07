@@ -56,19 +56,58 @@ int main(int, char ** argv)
 			// add continue if found!
 			if(ev1 == tv1)
 			{
-				// v2, v3
-				//if(edges[i]->v2i == tris[j]->v2i ||)
+				if(ev2 == tv2 || ev2 == tv3)
+				{
+					belongsTo++;
+					continue;
+				}
 			}
-			else if(edges[i]->v1i == tris[j]->v2i)
+			else if(ev1 == tv2)
 			{
-				// v1, v3
+				if(ev2 == tv1 || ev2 == tv2)
+				{
+					belongsTo++;
+					continue;
+				}
 			}
-			else if(edges[i]->v1i == tris[j]->v3i)
+			else if(ev1 == tv3)
 			{
-				// v1, v2
+				if(ev2 == tv1 || ev2 == tv3)
+				{
+					belongsTo++;
+					continue;
+				}
+			}
+			if(ev2 == tv1)
+			{
+				if(ev1 == tv2 || ev1 == tv3)
+				{
+					belongsTo++;
+					continue;
+				}
+			}
+			else if(ev2 == tv2)
+			{
+				if(ev1 == tv1 || ev1 == tv3)
+				{
+					belongsTo++;
+					continue;
+				}
+			}
+			else if(ev2 == tv3)
+			{
+				if(ev1 == tv1 || ev1 == tv2)
+				{
+					belongsTo++;
+					continue;
+				}
 			}
 		}
-		
+		if(belongsTo == 1)
+		{
+			boundaryVertices.insert(ev1);
+			boundaryVertices.insert(ev2);
+		}
 	}
 	for(auto it = boundaryVertices.begin(); it != boundaryVertices.end(); ++it)
 	{
@@ -401,9 +440,9 @@ int main(int, char ** argv)
 	}
 	*/
 	root->addChild( painter->getShapeSep(mesh) );
-	int visualization = -1;
-	while (visualization <= 0 || visualization > 3) {
-		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling :";
+	int visualization = 4;
+	while (visualization <= 0 || visualization > 4) {
+		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
 		cin >> visualization;
 		if (visualization <= 0 || visualization > 3) {
 			cout << "Invalid visualization query, try again: " << endl;
@@ -416,8 +455,12 @@ int main(int, char ** argv)
 		//root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
 	}
 	else if (visualization == 3) {
-		mesh->samples = boundaryIndices;
 		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f)); // visualization for sampled points
+	}
+	else if(visualization == 4)
+	{
+		mesh->samples = boundaryIndices;
+		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
 	}
 	
 	
