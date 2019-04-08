@@ -16,7 +16,7 @@ int main(int, char ** argv)
 	//make a dead simple scene graph by using the Coin library, only containing a single cone under the scenegraph root
 	SoSeparator * root = new SoSeparator;
 	root->ref();
-
+//
 	//stuff to be drawn on screen must be added to the root
 	SoCone * cone = new SoCone;
 	root->addChild(cone);
