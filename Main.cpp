@@ -18,7 +18,6 @@
 #include <queue>
 #include <chrono>
 #include <functional>
-#include <set>
 #include <cmath>
 #include <fstream>
 
@@ -27,12 +26,6 @@ using namespace Eigen;
 
 int main(int, char ** argv)
 {
-	/*MatrixXd m(2, 2);
-	m(0, 0) = 3;
-	m(1, 0) = 2.5;
-	m(0, 1) = -1;
-	m(1, 1) = m(1, 0) + m(0, 1);
-	std::cout << m << std::endl;*/
 
 	HWND window = SoWin::init(argv[0]);
 	SoWinExaminerViewer * viewer = new SoWinExaminerViewer(window);
@@ -47,17 +40,21 @@ int main(int, char ** argv)
 
 	const int numVertices = mesh->verts.size();
 	std::vector<int> boundaryIndices;
-	std::set<int> boundaryVertices;
 	const int numEdges = mesh->edges.size();
 	const int numTris = mesh->tris.size();
 	const auto edges = mesh->edges;
 	const auto tris = mesh->tris;
 	const auto verts = mesh->verts;
 	std::vector<bool> isVertexBoundary(numVertices, false);
-	for(int i = 0; i < numEdges; ++i){
-		int belongsTo = 0;
+	int i = 0;
+	int belongsTo = 0;
+	auto t0 = chrono::high_resolution_clock::now();
+//#pragma omp parallel for private (i) 
+	for(i = 0; i < numEdges; ++i){
+		belongsTo = 0;
 		const int ev1 = edges[i]->v1i;
 		const int ev2 = edges[i]->v2i;
+//#pragma omp parallel for reduction(+: belongsTo)
 		for(int j = 0; j < numTris; ++j){
 			const int tv1 = tris[j]->v1i;
 			const int tv2 = tris[j]->v2i;
@@ -103,6 +100,10 @@ int main(int, char ** argv)
 			isVertexBoundary[ev2] = true;
 		}
 	}
+	auto t1 = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Boundary edges: " << duration << " seconds" << endl;
+	t0 = chrono::high_resolution_clock::now();
 	std::vector<std::pair<float, float>> diskPoints;
 	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
 	double currentPointAngle = 0;
@@ -114,6 +115,7 @@ int main(int, char ** argv)
 	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
 			 xy(numVertices, 1), by(numVertices, 1);
 	int currentDiskPoint = 0;
+//#pragma omp parallel for
 	for(int i = 0; i < numVertices; ++i){
 		bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
 		by(i,0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
@@ -121,6 +123,11 @@ int main(int, char ** argv)
 		xx(i, 0) = 0; xy(i, 0) = 0;
 	}
 	currentDiskPoint = 0;
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
+//#pragma omp parallel for
+	t0 = chrono::high_resolution_clock::now();
 	for(int i = 0; i < numVertices; i++){
 		for (int j = 0; j < numVertices; j++) {
 			if (isVertexBoundary[i]) {
@@ -140,6 +147,9 @@ int main(int, char ** argv)
 			}
 		}
 	}
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Creating W, bx, by matrices: " << duration << " seconds" << endl;
 	std::ofstream file("matrices.txt"); 
 
 	file << "bx" << std::endl;
@@ -148,9 +158,33 @@ int main(int, char ** argv)
 	file << by << std::endl;
 	file << "w" << std::endl;
 	file << w << std::endl;;
-	file.close();
-
+	
 	currentDiskPoint = 0;
+	//xx = w.llt().solve(bx);
+	//xy = w.llt().solve(by);
+	t0 = chrono::high_resolution_clock::now();
+	xx = w.bdcSvd(ComputeThinU | ComputeThinV).solve(bx);
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Solving xx: " << duration << " seconds" << endl;
+	t0 = chrono::high_resolution_clock::now();
+	xy = w.bdcSvd(ComputeThinU | ComputeThinV).solve(by);
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Solving xy: " << duration << " seconds" << endl;
+	file << "x" << std::endl;
+	file << xx << std::endl;
+	file << "y" << std::endl;
+	file << xy << std::endl;
+	file.close();
+	for(int i = 0; i < numVertices; ++i)
+	{
+		for(int j = 0; j < numVertices; ++j)
+		{
+			
+		}
+	}
+
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
 #pragma region dijkstraQuery
