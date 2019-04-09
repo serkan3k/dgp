@@ -162,18 +162,18 @@ int main(int, char ** argv)
 	file << w << std::endl;;
 	
 	currentDiskPoint = 0;
-	auto winverse = w.inverse();
+	//auto winverse = w.inverse();
 	t0 = chrono::high_resolution_clock::now();
 //	xx = w.bdcSvd(ComputeThinU | ComputeThinV).solve(bx);
 	//xx = w.colPivHouseholderQr().solve(bx);
-	xx = winverse * bx;
+	//xx = winverse * bx;
 	//xx = w.ldlt().solve(bx);
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Solving xx: " << duration << " seconds" << endl;
 	t0 = chrono::high_resolution_clock::now();
 	//xy = w.colPivHouseholderQr().solve(by);
-	xy = winverse * by;
+	//xy = winverse * by;
 	//xy = w.bdcSvd(ComputeThinU | ComputeThinV).solve(by);
 	//xy = w.ldlt().solve(by);
 	t1 = chrono::high_resolution_clock::now();
@@ -539,8 +539,8 @@ int main(int, char ** argv)
 	else if(visualization == 4)
 	{
 		mesh->samples = boundaryIndices;
-//		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
-		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
+		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+		//root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
 	

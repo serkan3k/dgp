@@ -13,6 +13,9 @@
 #include <Inventor/Win/viewers/SoWinExaminerViewer.h>
 #include <Inventor/nodes/SoDrawStyle.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
+#include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoText2.h>
+
 #include <Eigen/Dense>
 //#include <Inventor/nodes/SoCone.h>
 

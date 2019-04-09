@@ -64,6 +64,10 @@ SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, floa
 	//returns a set of spheres to highlight each mesh.samples[i]
 
 	SoSeparator* spheresSep = new SoSeparator();
+	SoFont *myFont = new SoFont;
+	myFont->name.setValue("Times-Roman");
+	myFont->size.setValue(24.0);
+	spheresSep->addChild(myFont);
 
 	float radius = 0.25f;
 	//float radius = 2.0f;
@@ -94,11 +98,24 @@ SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, floa
 			ma->diffuseColor.setValue(SbColor(0.7f, 0.0f, 0.0f));
 
 		sphere1Sep->addChild(ma);
-
+		
 		//shape
 		SoSphere* sph1 = new SoSphere();
 		sph1->radius = radius;
 		sphere1Sep->addChild(sph1); //whose position is decided by the translation applied above
+
+		SoSeparator *africaSep = new SoSeparator;
+		SoTransform *africaTranslate = new SoTransform();
+		SoText2 *africaText = new SoText2;
+		africaTranslate->translation.setValue(.25, .0, 1.25);
+		SoMFString s;
+		s.setValue(i);
+		africaText->string = s;
+		sphere1Sep->addChild(africaSep);
+		africaSep->addChild(africaTranslate);
+		africaSep->addChild(africaText);
+
+
 
 		spheresSep->addChild(sphere1Sep);
 	}
