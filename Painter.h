@@ -13,10 +13,11 @@
 #include <Inventor/Win/viewers/SoWinExaminerViewer.h>
 #include <Inventor/nodes/SoDrawStyle.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
+#include <Eigen/Dense>
 //#include <Inventor/nodes/SoCone.h>
 
 #include "Mesh.h"
-
+using namespace Eigen;
 
 class Painter
 {
@@ -25,4 +26,5 @@ public:
 	SoSeparator * getSpheresSep(Mesh * mesh, float deltaX, float deltaY, float scale);
 	SoSeparator * getShortestPathSep(Mesh * mesh, const vector<int> &shortestPathVertices);
 	SoSeparator * getGeodesicIsoCurveSep(Mesh * mesh, const std::vector<std::vector<pair<std::vector<float>, std::vector<float>>>> &isoCurves, const std::vector<float> &histogramBins, const int seedVertex);
+	SoSeparator * getParametrizedMeshSep(Mesh * mesh, const MatrixXd xx, const MatrixXd xy);
 };
