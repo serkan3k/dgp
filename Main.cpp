@@ -518,7 +518,7 @@ int main(int, char ** argv)
 		}
 	}
 	*/
-	//root->addChild( painter->getShapeSep(mesh) );
+	root->addChild( painter->getShapeSep(mesh) );
 	int visualization = 4;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
