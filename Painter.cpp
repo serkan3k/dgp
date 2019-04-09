@@ -242,7 +242,7 @@ SoSeparator* Painter::getGeodesicIsoCurveSep(Mesh* mesh,
 	return res;
 }
 
-SoSeparator* Painter::getParametrizedMeshSep(Mesh* mesh, const MatrixXd xx, const MatrixXd xy)
+SoSeparator* Painter::getParametrizedMeshSep(Mesh* mesh, const MatrixXd &xx, const MatrixXd &xy)
 {
 	SoSeparator* thinEdgeSep = new SoSeparator;
 	SoMaterial* ma = new SoMaterial;
@@ -254,26 +254,28 @@ SoSeparator* Painter::getParametrizedMeshSep(Mesh* mesh, const MatrixXd xx, cons
 	SoIndexedLineSet* ils = new SoIndexedLineSet;
 	SoCoordinate3* co = new SoCoordinate3;
 
-	//assumes no edge in sedges is removed
 	const int numVertices = mesh->verts.size();
-	for(int i = 0; i < numVertices; ++i)
+	const int numEdges = mesh->edges.size();
+	for(int i = 0; i < numEdges; ++i)
 	{
+		const auto edge = mesh->edges[i];
 		float p1[3];
+		p1[0] = xx(edge->v1i, 0); p1[1] = xy(edge->v1i, 0); p1[2] = 0;
 		float p2[3];
-		//
-	}
-	/*for (int i = 0; i < shortestPathVertices.size() - 1; ++i) {
-		SbVec3f end1 = mesh->verts[shortestPathVertices[i]]->coords;
-		SbVec3f end2 = mesh->verts[shortestPathVertices[i + 1]]->coords;
+		p2[0] = xx(edge->v2i, 0); p2[1] = xy(edge->v2i, 0); p2[2] = 0;
+		SbVec3f end1 = p1;
+		SbVec3f end2 = p2;
 		co->point.set1Value(2 * i, end1);
 		co->point.set1Value(2 * i + 1, end2);
 	}
-	for (int i = 0; i < shortestPathVertices.size() - 1; ++i) {
+	for(int i = 0; i < numEdges; ++i)
+	{
 		ils->coordIndex.set1Value(3 * i, 2 * i);
 		ils->coordIndex.set1Value(3 * i + 1, 2 * i + 1);
 		ils->coordIndex.set1Value(3 * i + 2, -1);
 	}
-	thickEdgeSep->addChild(co);	thickEdgeSep->addChild(ils);*/
+	thinEdgeSep->addChild(co);	thinEdgeSep->addChild(ils);
+	return thinEdgeSep;
 }
 
 
