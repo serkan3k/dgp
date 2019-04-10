@@ -34,8 +34,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("facem-low.off") + 1); 
-	strcpy(x, "facem-low.off");
+	char* x = (char*)malloc(strlen("facem.off") + 1); 
+	strcpy(x, "facem.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -258,18 +258,15 @@ int main(int, char ** argv)
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Creating W matrix: " << duration << " seconds" << endl;
 	for (int i = 0; i < numVertices; ++i) {
-		//bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
-		//by(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
-		//currentDiskPoint += isVertexBoundary[i];
-		//currentDiskPoint -= isVertexBoundary[i];
 		xx(i, 0) = 0; xy(i, 0) = 0; bx(i, 0) = 0; by(i, 0) = 0; // init
 	}
 
 	t0 = chrono::high_resolution_clock::now();
 	std::vector<std::pair<float, float>> diskPoints;
-	auto stepSize = M_PI * 2.0 / (double)(boundaryIndices.size() - 1);
+	auto stepSize = M_PI * 2.0 / (double)(boundaryIndices.size());
 	double currentPointAngle = 0;
-	while (currentPointAngle <= M_PI * 2.0)
+	//while (currentPointAngle <= M_PI * 2.0)
+	while (diskPoints.size() != boundaryIndices.size())
 	{
 		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
 		currentPointAngle += stepSize;
@@ -277,12 +274,13 @@ int main(int, char ** argv)
 	//int currentDiskPoint = diskPoints.size() - 1;
 	int currentDiskPoint = 0;
 	int selectedIndex = boundaryIndices[0];
+	std::vector<bool> isVertexBoundaryBackup = isVertexBoundary;
 	bx(selectedIndex, 0) = diskPoints[0].first;
 	by(selectedIndex, 0) = diskPoints[0].second;
-	//isVertexBoundary[selectedIndex] = false;
+	isVertexBoundary[selectedIndex] = false;
 	currentDiskPoint++;
 	int minBoundaryIdx = -1;
-	while(currentDiskPoint < boundaryIndices.size() - 1)
+	while(currentDiskPoint < boundaryIndices.size() )
 	{
 		float minDist = FLT_MAX;
 		minBoundaryIdx = -1;
@@ -296,22 +294,41 @@ int main(int, char ** argv)
 				{
 					minDist = distances[selectedIndex][neighbourIdx];
 					minBoundaryIdx = neighbourIdx;
+					isVertexBoundary[neighbourIdx] = false;
 				}
-				isVertexBoundary[neighbourIdx] = false;
+				
 			}
 		}
-		bx(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].first;
-		by(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].second;
+		if (minBoundaryIdx != -1) {
+			bx(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].first;
+			by(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].second;
+			selectedIndex = minBoundaryIdx;
+		}
+		else
+		{
+
+			bx(selectedIndex, 0) = diskPoints[currentDiskPoint].first;
+			by(selectedIndex, 0) = diskPoints[currentDiskPoint].second;
+		}
 		currentDiskPoint++;
-		selectedIndex = minBoundaryIdx;
 	}
-	bx(selectedIndex, 0) = diskPoints[diskPoints.size() - 1].first;
-	by(selectedIndex, 0) = diskPoints[diskPoints.size() - 1].second;
+	//bx(selectedIndex, 0) = diskPoints[currentDiskPoint].first;
+	//by(selectedIndex, 0) = diskPoints[currentDiskPoint].second;
 	currentDiskPoint = 0;
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
-	
+	for(int i = 0; i < numVertices; ++i)
+	{
+		if(isVertexBoundaryBackup[i] && (bx(i, 0) == 0.0 || by(i, 0) == 0))
+		{
+			std::cout << "ERROR BOUNDARY VERTEX " << i << " HAS 0 VAL" << std::endl;
+		}
+		else if(isVertexBoundaryBackup[i] == false && (bx(i, 0) != 0.0 || by(i, 0) != 0))
+		{
+			std::cout << "ERROR NON-BOUNDARY VERTEX " << i << " HAS NONZERO VAL" << std::endl;
+		}
+	}
 
 	std::ofstream file("matrices.txt");
 
@@ -345,13 +362,6 @@ int main(int, char ** argv)
 	file << "y" << std::endl;
 	file << xy << std::endl;
 	file.close();
-	for (int i = 0; i < numVertices; ++i)
-	{
-		for (int j = 0; j < numVertices; ++j)
-		{
-
-		}
-	}
 	/*
 	FILE * pFile;
 	pFile = fopen("dijkstra_out.txt", "w");
