@@ -39,158 +39,7 @@ int main(int, char ** argv)
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
-	std::vector<int> boundaryIndices;
-	const int numEdges = mesh->edges.size();
-	const int numTris = mesh->tris.size();
-	const auto edges = mesh->edges;
-	const auto tris = mesh->tris;
-	const auto verts = mesh->verts;
-	std::vector<bool> isVertexBoundary(numVertices, false);
-	int i = 0;
-	int belongsTo = 0;
-	auto t0 = chrono::high_resolution_clock::now();
-//#pragma omp parallel for private (i) 
-	for(i = 0; i < numEdges; ++i){
-		belongsTo = 0;
-		const int ev1 = edges[i]->v1i;
-		const int ev2 = edges[i]->v2i;
-//#pragma omp parallel for reduction(+: belongsTo)
-		for(int j = 0; j < numTris; ++j){
-			const int tv1 = tris[j]->v1i;
-			const int tv2 = tris[j]->v2i;
-			const int tv3 = tris[j]->v3i;
-			if(ev1 == tv1){
-				if(ev2 == tv2 || ev2 == tv3){
-					belongsTo++;
-					continue;
-				}
-			}
-			else if(ev1 == tv2){
-				if(ev2 == tv1 || ev2 == tv2){
-					belongsTo++;
-					continue;
-				}
-			}
-			else if(ev1 == tv3){
-				if(ev2 == tv1 || ev2 == tv3){
-					belongsTo++;
-					continue;
-				}
-			}
-			if(ev2 == tv1){
-				if(ev1 == tv2 || ev1 == tv3){
-					belongsTo++;
-				}
-			}
-			else if(ev2 == tv2){
-				if(ev1 == tv1 || ev1 == tv3){
-					belongsTo++;
-				}
-			}
-			else if(ev2 == tv3){
-				if(ev1 == tv1 || ev1 == tv2){
-					belongsTo++;
-				}
-			}
-		}
-		if(belongsTo == 1){
-			if (!isVertexBoundary[ev1]) boundaryIndices.push_back(ev1);
-			if (!isVertexBoundary[ev2]) boundaryIndices.push_back(ev2);
-			isVertexBoundary[ev1] = true;
-			isVertexBoundary[ev2] = true;
-		}
-	}
-	auto t1 = chrono::high_resolution_clock::now();
-	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Boundary edges: " << duration << " seconds" << endl;
-	t0 = chrono::high_resolution_clock::now();
-	std::vector<std::pair<float, float>> diskPoints;
-	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
-	double currentPointAngle = 0;
-	while(currentPointAngle < M_PI * 2.0)
-	{
-		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
-		currentPointAngle += stepSize;
-	}
-	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
-			 xy(numVertices, 1), by(numVertices, 1);
-	int currentDiskPoint = 0;
-	//int currentDiskPoint = diskPoints.size() - 1;
-//#pragma omp parallel for
-	for(int i = 0; i < numVertices; ++i){
-		bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
-		by(i,0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
-		currentDiskPoint += isVertexBoundary[i];
-		//currentDiskPoint -= isVertexBoundary[i];
-		xx(i, 0) = 0; xy(i, 0) = 0;
-	}
-	currentDiskPoint = 0;
-	t1 = chrono::high_resolution_clock::now();
-	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
-//#pragma omp parallel for
-	t0 = chrono::high_resolution_clock::now();
-	for(int i = 0; i < numVertices; i++){
-		for (int j = 0; j < numVertices; j++) {
-			if (isVertexBoundary[i]) {
-				w(i, j) = i == j ? 1 : 0;
-				continue;
-			}
-			if(i == j){
-				w(i, j) = (double)verts[i]->vertList.size() * -1.0;
-				continue;
-			}
-			w(i, j) = 0;
-			for(const auto &k:verts[i]->vertList){
-				 if(k == j){
-					 w(i, j) = 1;
-					 break;
-				 }
-			}
-		}
-	}
-	t1 = chrono::high_resolution_clock::now();
-	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Creating W, bx, by matrices: " << duration << " seconds" << endl;
-	std::ofstream file("matrices.txt"); 
-
-	file << "bx" << std::endl;
-	file << bx << std::endl;
-	file << "by" << std::endl;
-	file << by << std::endl;
-	file << "w" << std::endl;
-	file << w << std::endl;;
 	
-	currentDiskPoint = 0;
-	//auto winverse = w.inverse();
-	t0 = chrono::high_resolution_clock::now();
-//	xx = w.bdcSvd(ComputeThinU | ComputeThinV).solve(bx);
-	//xx = w.colPivHouseholderQr().solve(bx);
-	//xx = winverse * bx;
-	//xx = w.ldlt().solve(bx);
-	t1 = chrono::high_resolution_clock::now();
-	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Solving xx: " << duration << " seconds" << endl;
-	t0 = chrono::high_resolution_clock::now();
-	//xy = w.colPivHouseholderQr().solve(by);
-	//xy = winverse * by;
-	//xy = w.bdcSvd(ComputeThinU | ComputeThinV).solve(by);
-	//xy = w.ldlt().solve(by);
-	t1 = chrono::high_resolution_clock::now();
-	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Solving xy: " << duration << " seconds" << endl;
-	file << "x" << std::endl;
-	file << xx << std::endl;
-	file << "y" << std::endl;
-	file << xy << std::endl;
-	file.close();
-	for(int i = 0; i < numVertices; ++i)
-	{
-		for(int j = 0; j < numVertices; ++j)
-		{
-			
-		}
-	}
 
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
@@ -273,7 +122,7 @@ int main(int, char ** argv)
 	std::cout << "Array: " << duration << " seconds"  << endl;
 	*/
 #pragma endregion 
-	/*
+	
 #pragma region minHeap
 	std::vector<std::vector<float>> distances(numVertices);
 	std::vector<std::vector<int>> parents(numVertices);
@@ -315,9 +164,162 @@ int main(int, char ** argv)
 	}
 	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Min heap: " << duration << " seconds" << endl;
+	std::cout << "Dijkstra: " << duration << " seconds" << endl;
 #pragma endregion 
-	
+
+	std::vector<int> boundaryIndices;
+	const int numEdges = mesh->edges.size();
+	const int numTris = mesh->tris.size();
+	const auto edges = mesh->edges;
+	const auto tris = mesh->tris;
+	const auto verts = mesh->verts;
+	std::vector<bool> isVertexBoundary(numVertices, false);
+	int i = 0;
+	int belongsTo = 0;
+	t0 = chrono::high_resolution_clock::now();
+	//#pragma omp parallel for private (i) 
+	for (i = 0; i < numEdges; ++i) {
+		belongsTo = 0;
+		const int ev1 = edges[i]->v1i;
+		const int ev2 = edges[i]->v2i;
+		//#pragma omp parallel for reduction(+: belongsTo)
+		for (int j = 0; j < numTris; ++j) {
+			const int tv1 = tris[j]->v1i;
+			const int tv2 = tris[j]->v2i;
+			const int tv3 = tris[j]->v3i;
+			if (ev1 == tv1) {
+				if (ev2 == tv2 || ev2 == tv3) {
+					belongsTo++;
+					continue;
+				}
+			}
+			else if (ev1 == tv2) {
+				if (ev2 == tv1 || ev2 == tv2) {
+					belongsTo++;
+					continue;
+				}
+			}
+			else if (ev1 == tv3) {
+				if (ev2 == tv1 || ev2 == tv3) {
+					belongsTo++;
+					continue;
+				}
+			}
+			if (ev2 == tv1) {
+				if (ev1 == tv2 || ev1 == tv3) {
+					belongsTo++;
+				}
+			}
+			else if (ev2 == tv2) {
+				if (ev1 == tv1 || ev1 == tv3) {
+					belongsTo++;
+				}
+			}
+			else if (ev2 == tv3) {
+				if (ev1 == tv1 || ev1 == tv2) {
+					belongsTo++;
+				}
+			}
+		}
+		if (belongsTo == 1) {
+			if (!isVertexBoundary[ev1]) boundaryIndices.push_back(ev1);
+			if (!isVertexBoundary[ev2]) boundaryIndices.push_back(ev2);
+			isVertexBoundary[ev1] = true;
+			isVertexBoundary[ev2] = true;
+		}
+	}
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Boundary edges: " << duration << " seconds" << endl;
+	t0 = chrono::high_resolution_clock::now();
+	std::vector<std::pair<float, float>> diskPoints;
+	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
+	double currentPointAngle = 0;
+	while (currentPointAngle < M_PI * 2.0)
+	{
+		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
+		currentPointAngle += stepSize;
+	}
+	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
+		xy(numVertices, 1), by(numVertices, 1);
+	int currentDiskPoint = 0;
+	//int currentDiskPoint = diskPoints.size() - 1;
+//#pragma omp parallel for
+	for (int i = 0; i < numVertices; ++i) {
+		bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
+		by(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
+		currentDiskPoint += isVertexBoundary[i];
+		//currentDiskPoint -= isVertexBoundary[i];
+		xx(i, 0) = 0; xy(i, 0) = 0;
+	}
+	currentDiskPoint = 0;
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
+	//#pragma omp parallel for
+	t0 = chrono::high_resolution_clock::now();
+	for (int i = 0; i < numVertices; i++) {
+		for (int j = 0; j < numVertices; j++) {
+			if (isVertexBoundary[i]) {
+				w(i, j) = i == j ? 1 : 0;
+				continue;
+			}
+			if (i == j) {
+				w(i, j) = (double)verts[i]->vertList.size() * -1.0;
+				continue;
+			}
+			w(i, j) = 0;
+			for (const auto &k : verts[i]->vertList) {
+				if (k == j) {
+					w(i, j) = 1;
+					break;
+				}
+			}
+		}
+	}
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Creating W, bx, by matrices: " << duration << " seconds" << endl;
+	std::ofstream file("matrices.txt");
+
+	file << "bx" << std::endl;
+	file << bx << std::endl;
+	file << "by" << std::endl;
+	file << by << std::endl;
+	file << "w" << std::endl;
+	file << w << std::endl;;
+
+	currentDiskPoint = 0;
+	//auto winverse = w.inverse();
+	t0 = chrono::high_resolution_clock::now();
+	//	xx = w.bdcSvd(ComputeThinU | ComputeThinV).solve(bx);
+		//xx = w.colPivHouseholderQr().solve(bx);
+		//xx = winverse * bx;
+		//xx = w.ldlt().solve(bx);
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Solving xx: " << duration << " seconds" << endl;
+	t0 = chrono::high_resolution_clock::now();
+	//xy = w.colPivHouseholderQr().solve(by);
+	//xy = winverse * by;
+	//xy = w.bdcSvd(ComputeThinU | ComputeThinV).solve(by);
+	//xy = w.ldlt().solve(by);
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Solving xy: " << duration << " seconds" << endl;
+	file << "x" << std::endl;
+	file << xx << std::endl;
+	file << "y" << std::endl;
+	file << xy << std::endl;
+	file.close();
+	for (int i = 0; i < numVertices; ++i)
+	{
+		for (int j = 0; j < numVertices; ++j)
+		{
+
+		}
+	}
+	/*
 	FILE * pFile;
 	pFile = fopen("dijkstra_out.txt", "w");
 
