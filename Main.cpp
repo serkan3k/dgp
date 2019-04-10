@@ -166,7 +166,6 @@ int main(int, char ** argv)
 	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Dijkstra: " << duration << " seconds" << endl;
 #pragma endregion 
-
 	std::vector<int> boundaryIndices;
 	const int numEdges = mesh->edges.size();
 	const int numTris = mesh->tris.size();
@@ -231,32 +230,10 @@ int main(int, char ** argv)
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Boundary edges: " << duration << " seconds" << endl;
-	t0 = chrono::high_resolution_clock::now();
-	std::vector<std::pair<float, float>> diskPoints;
-	auto stepSize = M_PI * 2.0 / (double)boundaryIndices.size();
-	double currentPointAngle = 0;
-	while (currentPointAngle < M_PI * 2.0)
-	{
-		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
-		currentPointAngle += stepSize;
-	}
+	
+
 	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
 		xy(numVertices, 1), by(numVertices, 1);
-	int currentDiskPoint = 0;
-	//int currentDiskPoint = diskPoints.size() - 1;
-//#pragma omp parallel for
-	for (int i = 0; i < numVertices; ++i) {
-		bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
-		by(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
-		currentDiskPoint += isVertexBoundary[i];
-		//currentDiskPoint -= isVertexBoundary[i];
-		xx(i, 0) = 0; xy(i, 0) = 0;
-	}
-	currentDiskPoint = 0;
-	t1 = chrono::high_resolution_clock::now();
-	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
-	//#pragma omp parallel for
 	t0 = chrono::high_resolution_clock::now();
 	for (int i = 0; i < numVertices; i++) {
 		for (int j = 0; j < numVertices; j++) {
@@ -279,7 +256,63 @@ int main(int, char ** argv)
 	}
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
-	std::cout << "Creating W, bx, by matrices: " << duration << " seconds" << endl;
+	std::cout << "Creating W matrix: " << duration << " seconds" << endl;
+	for (int i = 0; i < numVertices; ++i) {
+		//bx(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].first : 0;
+		//by(i, 0) = isVertexBoundary[i] ? diskPoints[currentDiskPoint].second : 0;
+		//currentDiskPoint += isVertexBoundary[i];
+		//currentDiskPoint -= isVertexBoundary[i];
+		xx(i, 0) = 0; xy(i, 0) = 0; bx(i, 0) = 0; by(i, 0) = 0; // init
+	}
+
+	t0 = chrono::high_resolution_clock::now();
+	std::vector<std::pair<float, float>> diskPoints;
+	auto stepSize = M_PI * 2.0 / (double)(boundaryIndices.size() - 1);
+	double currentPointAngle = 0;
+	while (currentPointAngle <= M_PI * 2.0)
+	{
+		diskPoints.push_back(std::make_pair(std::cos(currentPointAngle), std::sin(currentPointAngle)));
+		currentPointAngle += stepSize;
+	}
+	//int currentDiskPoint = diskPoints.size() - 1;
+	int currentDiskPoint = 0;
+	int selectedIndex = boundaryIndices[0];
+	bx(selectedIndex, 0) = diskPoints[0].first;
+	by(selectedIndex, 0) = diskPoints[0].second;
+	//isVertexBoundary[selectedIndex] = false;
+	currentDiskPoint++;
+	int minBoundaryIdx = -1;
+	while(currentDiskPoint < boundaryIndices.size() - 1)
+	{
+		float minDist = FLT_MAX;
+		minBoundaryIdx = -1;
+		auto neighbours = mesh->verts[selectedIndex]->vertList;
+		for(int i = 0; i < neighbours.size(); ++i)
+		{
+			auto neighbourIdx = neighbours[i];
+			if(isVertexBoundary[neighbourIdx])
+			{
+				if(distances[selectedIndex][neighbourIdx] < minDist)
+				{
+					minDist = distances[selectedIndex][neighbourIdx];
+					minBoundaryIdx = neighbourIdx;
+				}
+				isVertexBoundary[neighbourIdx] = false;
+			}
+		}
+		bx(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].first;
+		by(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].second;
+		currentDiskPoint++;
+		selectedIndex = minBoundaryIdx;
+	}
+	bx(selectedIndex, 0) = diskPoints[diskPoints.size() - 1].first;
+	by(selectedIndex, 0) = diskPoints[diskPoints.size() - 1].second;
+	currentDiskPoint = 0;
+	t1 = chrono::high_resolution_clock::now();
+	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
+	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
+	
+
 	std::ofstream file("matrices.txt");
 
 	file << "bx" << std::endl;
@@ -290,18 +323,18 @@ int main(int, char ** argv)
 	file << w << std::endl;;
 
 	currentDiskPoint = 0;
-	//auto winverse = w.inverse();
+	auto winverse = w.inverse();
 	t0 = chrono::high_resolution_clock::now();
 	//	xx = w.bdcSvd(ComputeThinU | ComputeThinV).solve(bx);
 		//xx = w.colPivHouseholderQr().solve(bx);
-		//xx = winverse * bx;
+	xx = winverse * bx;
 		//xx = w.ldlt().solve(bx);
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Solving xx: " << duration << " seconds" << endl;
 	t0 = chrono::high_resolution_clock::now();
 	//xy = w.colPivHouseholderQr().solve(by);
-	//xy = winverse * by;
+	xy = winverse * by;
 	//xy = w.bdcSvd(ComputeThinU | ComputeThinV).solve(by);
 	//xy = w.ldlt().solve(by);
 	t1 = chrono::high_resolution_clock::now();
@@ -520,7 +553,7 @@ int main(int, char ** argv)
 		}
 	}
 	*/
-	root->addChild( painter->getShapeSep(mesh) );
+	//root->addChild( painter->getShapeSep(mesh) );
 	int visualization = 4;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
@@ -541,8 +574,8 @@ int main(int, char ** argv)
 	else if(visualization == 4)
 	{
 		mesh->samples = boundaryIndices;
-		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
-		//root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
+		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
 	
