@@ -265,9 +265,67 @@ int main(int, char ** argv)
 	}
 	for(int i = 0; i < nonBoundaryIndices.size(); ++i){
 		const auto vertexId = nonBoundaryIndices[i];
-		const auto neighbours = mesh->verts[vertexId]->vertList;
-		//auto  = mesh->verts[vertexId]->vertList;
-
+		const auto neighbouringEdges = mesh->verts[vertexId]->edgeList;
+		const auto neighbouringTris = mesh->verts[vertexId]->triList;
+		if(neighbouringTris.size() < 2){
+			std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to less than 2 triangles" << std::endl;
+			continue;
+		}
+		for(int j = 0; j < neighbouringEdges.size(); ++j){
+			std::vector<int> triangleIndices;
+			const int ev1 = mesh->edges[neighbouringEdges[j]]->v1i;
+			const int ev2 = mesh->edges[neighbouringEdges[j]]->v2i;
+			for(int k = 0; k < neighbouringTris.size(); ++k){
+				const int tv1 = mesh->tris[neighbouringTris[k]]->v1i;
+				const int tv2 = mesh->tris[neighbouringTris[k]]->v2i;
+				const int tv3 = mesh->tris[neighbouringTris[k]]->v3i;
+				if (ev1 == tv1) {
+					if (ev2 == tv2 || ev2 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+						continue;
+					}
+				}
+				else if (ev1 == tv2) {
+					if (ev2 == tv1 || ev2 == tv2) {
+						triangleIndices.push_back(neighbouringTris[k]); 
+						continue;
+					}
+				}
+				else if (ev1 == tv3) {
+					if (ev2 == tv1 || ev2 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]); 
+						continue;
+					}
+				}
+				if (ev2 == tv1) {
+					if (ev1 == tv2 || ev1 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+					}
+				}
+				else if (ev2 == tv2) {
+					if (ev1 == tv1 || ev1 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+					}
+				}
+				else if (ev2 == tv3) {
+					if (ev1 == tv1 || ev1 == tv2) {
+						triangleIndices.push_back(neighbouringTris[k]);
+					}
+				}
+			}
+			if(triangleIndices.size() == 2){
+				auto cotangent = 0;
+				if(vertexId == ev1){
+					w(vertexId, ev2) = cotangent;
+				}
+				else{
+					w(vertexId, ev1) = cotangent;
+				}
+			}
+			else{
+				std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to " << triangleIndices.size() << " triangles" << std::endl;
+			}
+		}
 	}
 #pragma endregion
 	t1 = chrono::high_resolution_clock::now();
