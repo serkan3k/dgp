@@ -738,7 +738,7 @@ int main(int, char ** argv)
 		}
 	}
 	*/
-	root->addChild( painter->getShapeSep(mesh) );
+	//root->addChild( painter->getShapeSep(mesh) );
 	int visualization = 4;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
@@ -759,7 +759,7 @@ int main(int, char ** argv)
 	else if(visualization == 4)
 	{
 		mesh->samples = boundaryIndices;
-		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
 		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
