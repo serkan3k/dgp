@@ -235,6 +235,7 @@ int main(int, char ** argv)
 	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
 		xy(numVertices, 1), by(numVertices, 1);
 	t0 = chrono::high_resolution_clock::now();
+#pragma region uniform
 	for (int i = 0; i < numVertices; i++) {
 		for (int j = 0; j < numVertices; j++) {
 			if (isVertexBoundary[i]) {
@@ -254,6 +255,21 @@ int main(int, char ** argv)
 			}
 		}
 	}
+#pragma endregion
+#pragma region harmonic
+	std::vector<int> nonBoundaryIndices;
+	for(int i = 0; i < numVertices; ++i){
+		if(!isVertexBoundary[i]){
+			nonBoundaryIndices.push_back(i);
+		}
+	}
+	for(int i = 0; i < nonBoundaryIndices.size(); ++i){
+		const auto vertexId = nonBoundaryIndices[i];
+		const auto neighbours = mesh->verts[vertexId]->vertList;
+		//auto  = mesh->verts[vertexId]->vertList;
+
+	}
+#pragma endregion
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Creating W matrix: " << duration << " seconds" << endl;
@@ -306,7 +322,6 @@ int main(int, char ** argv)
 		}
 		else
 		{
-
 			bx(selectedIndex, 0) = diskPoints[currentDiskPoint].first;
 			by(selectedIndex, 0) = diskPoints[currentDiskPoint].second;
 		}
@@ -318,6 +333,8 @@ int main(int, char ** argv)
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
+
+	// checking for degenerate cases for debugging, namely bx and by values
 	for(int i = 0; i < numVertices; ++i)
 	{
 		if(isVertexBoundaryBackup[i] && (bx(i, 0) == 0.0 && by(i, 0) == 0.0))
