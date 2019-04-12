@@ -34,8 +34,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("facem.off") + 1); 
-	strcpy(x, "facem.off");
+	char* x = (char*)malloc(strlen("facem-low.off") + 1); 
+	strcpy(x, "facem-low.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -320,7 +320,7 @@ int main(int, char ** argv)
 	std::cout << "Mapping on disk: " << duration << " seconds" << endl;
 	for(int i = 0; i < numVertices; ++i)
 	{
-		if(isVertexBoundaryBackup[i] && (bx(i, 0) == 0.0 || by(i, 0) == 0))
+		if(isVertexBoundaryBackup[i] && (bx(i, 0) == 0.0 && by(i, 0) == 0.0))
 		{
 			std::cout << "ERROR BOUNDARY VERTEX " << i << " HAS 0 VAL" << std::endl;
 		}
@@ -563,7 +563,7 @@ int main(int, char ** argv)
 		}
 	}
 	*/
-	//root->addChild( painter->getShapeSep(mesh) );
+	root->addChild( painter->getShapeSep(mesh) );
 	int visualization = 4;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
@@ -584,7 +584,7 @@ int main(int, char ** argv)
 	else if(visualization == 4)
 	{
 		mesh->samples = boundaryIndices;
-		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
 		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
