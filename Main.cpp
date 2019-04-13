@@ -34,8 +34,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("facem-low.off") + 1); 
-	strcpy(x, "facem-low.off");
+	char* x = (char*)malloc(strlen("face-low.off") + 1); 
+	strcpy(x, "face-low.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -230,12 +230,22 @@ int main(int, char ** argv)
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Boundary edges: " << duration << " seconds" << endl;
-	
+
+	// find the outermost boundary, to get rid of the hole vertices end up
+	// being on the boundary
+	bool processingDone = false;
+	while (processingDone == false) {
+		for (int i = 0; i < boundaryIndices.size(); ++i) {
+
+		}
+	}
+
+
 
 	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
 		xy(numVertices, 1), by(numVertices, 1);
 	t0 = chrono::high_resolution_clock::now();
-/*
+
 #pragma region uniform
 	for (int i = 0; i < numVertices; i++) {
 		for (int j = 0; j < numVertices; j++) {
@@ -257,7 +267,7 @@ int main(int, char ** argv)
 		}
 	}
 #pragma endregion
-*/
+
 	/*
 #pragma region harmonic
 	std::vector<int> nonBoundaryIndices;
@@ -430,6 +440,7 @@ int main(int, char ** argv)
 	}
 #pragma endregion
 */
+	/*
 #pragma region meanvalueweights
 	std::vector<int> nonBoundaryIndices;
 	for (int i = 0; i < numVertices; ++i) {
@@ -635,7 +646,7 @@ int main(int, char ** argv)
 		w(i, i) = -sum;
 	}
 #pragma endregion
-
+*/
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Creating W matrix: " << duration << " seconds" << endl;
