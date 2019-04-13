@@ -258,6 +258,7 @@ int main(int, char ** argv)
 	}
 #pragma endregion
 */
+	/*
 #pragma region harmonic
 	std::vector<int> nonBoundaryIndices;
 	for(int i = 0; i < numVertices; ++i){
@@ -428,6 +429,213 @@ int main(int, char ** argv)
 		w(i, i) = -sum;
 	}
 #pragma endregion
+*/
+#pragma region meanvalueweights
+	std::vector<int> nonBoundaryIndices;
+	for (int i = 0; i < numVertices; ++i) {
+		if (!isVertexBoundary[i]) {
+			nonBoundaryIndices.push_back(i);
+		}
+		for (int j = 0; j < numVertices; ++j) {
+			if (isVertexBoundary[i]) {
+				if (i == j) {
+					w(i, j) = 1;
+				}
+				else {
+					w(i, j) = 0;
+				}
+			}
+			else {
+				w(i, j) = 0;
+			}
+		}
+	}
+	for (int i = 0; i < nonBoundaryIndices.size(); ++i) {
+		const auto vertexId = nonBoundaryIndices[i];
+		const auto neighbouringEdges = mesh->verts[vertexId]->edgeList;
+		const auto neighbouringTris = mesh->verts[vertexId]->triList;
+		if (neighbouringTris.size() < 2) {
+			std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to less than 2 triangles" << std::endl;
+			continue;
+		}
+		for (int j = 0; j < neighbouringEdges.size(); ++j) {
+			std::vector<int> triangleIndices;
+			const int ev1 = mesh->edges[neighbouringEdges[j]]->v1i;
+			const int ev2 = mesh->edges[neighbouringEdges[j]]->v2i;
+			for (int k = 0; k < neighbouringTris.size(); ++k) {
+				const int tv1 = mesh->tris[neighbouringTris[k]]->v1i;
+				const int tv2 = mesh->tris[neighbouringTris[k]]->v2i;
+				const int tv3 = mesh->tris[neighbouringTris[k]]->v3i;
+				if (ev1 == tv1) {
+					if (ev2 == tv2 || ev2 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+						continue;
+					}
+				}
+				else if (ev1 == tv2) {
+					if (ev2 == tv1 || ev2 == tv2) {
+						triangleIndices.push_back(neighbouringTris[k]);
+						continue;
+					}
+				}
+				else if (ev1 == tv3) {
+					if (ev2 == tv1 || ev2 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+						continue;
+					}
+				}
+				if (ev2 == tv1) {
+					if (ev1 == tv2 || ev1 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+					}
+				}
+				else if (ev2 == tv2) {
+					if (ev1 == tv1 || ev1 == tv3) {
+						triangleIndices.push_back(neighbouringTris[k]);
+					}
+				}
+				else if (ev2 == tv3) {
+					if (ev1 == tv1 || ev1 == tv2) {
+						triangleIndices.push_back(neighbouringTris[k]);
+					}
+				}
+			}
+			if (triangleIndices.size() == 2) {
+				auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
+				auto secondTriangleIdx = mesh->tris[triangleIndices[1]];
+				int firstTriangleOtherVertexIdx = -1;
+				int secondTriangleOtherVertexIdx = -1;
+				if (firstTriangleIdx->v1i == ev1) {
+					if (firstTriangleIdx->v2i == ev2) {
+						firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+					}
+					else {
+						firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+					}
+				}
+				else if (firstTriangleIdx->v2i == ev1) {
+					if (firstTriangleIdx->v1i == ev2) {
+						firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+					}
+					else {
+						firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+					}
+				}
+				else {
+					if (firstTriangleIdx->v2i == ev2) {
+						firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+					}
+					else {
+						firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+					}
+				}
+				if (secondTriangleIdx->v1i == ev1) {
+					if (secondTriangleIdx->v2i == ev2) {
+						secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
+					}
+					else {
+						secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+					}
+				}
+				else if (secondTriangleIdx->v2i == ev1) {
+					if (secondTriangleIdx->v1i == ev2) {
+						secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
+					}
+					else {
+						secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+					}
+				}
+				else {
+					if (secondTriangleIdx->v2i == ev2) {
+						secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+					}
+					else {
+						secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+					}
+				}
+				float x1, y1, z1, x2, y2, z2, angle, tangent1, tangent2;
+				if (vertexId == ev1)
+				{
+					x1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
+					y1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
+					z1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
+					x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
+					y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
+					z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+					auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+					auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+					auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+					angle = acos(dot / sqrt(lenSq1 * lenSq2));
+					if (angle < 0) angle += 2 * M_PI;
+					tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
+					x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
+					y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
+					z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
+					x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
+					y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
+					z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+					dot = x1 * x2 + y1 * y2 + z1 * z2;
+					lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+					lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+					angle = acos(dot / sqrt(lenSq1 * lenSq2));
+					if (angle < 0) angle += 2 * M_PI;
+					tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
+				}
+				else
+				{
+					x1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
+					y1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
+					z1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
+					x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
+					y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
+					z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
+					auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+					auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+					auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+					angle = acos(dot / sqrt(lenSq1 * lenSq2));
+					if (angle < 0) angle += 2 * M_PI;
+					tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
+					x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
+					y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
+					z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
+					x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
+					y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
+					z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
+					dot = x1 * x2 + y1 * y2 + z1 * z2;
+					lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+					lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+					angle = acos(dot / sqrt(lenSq1 * lenSq2));
+					if (angle < 0) angle += 2 * M_PI;
+					tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
+				}
+				auto xsq = pow(mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0], 2.0);
+				auto ysq = pow(mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1], 2.0);
+				auto zsq = pow(mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2], 2.0);
+				auto len = sqrt(xsq + ysq + zsq);
+				if (vertexId == ev1) {
+					w(ev1, ev2) = (tangent1 + tangent2) / (2.0f * len);
+				}
+				else {
+					w(ev2, ev1) = (tangent1 + tangent2) / (2.0f * len);
+				}
+			}
+			else {
+				std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to " << triangleIndices.size() << " triangles" << std::endl;
+			}
+		}
+	}
+	for (int i = 0; i < numVertices; ++i)
+	{
+		if (isVertexBoundary[i]) continue;
+		double sum = 0.0;
+		for (int j = 0; j < numVertices; ++j)
+		{
+			sum += w(i, j);
+		}
+		w(i, i) = -sum;
+	}
+#pragma endregion
+
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Creating W matrix: " << duration << " seconds" << endl;
