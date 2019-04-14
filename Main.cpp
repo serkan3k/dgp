@@ -37,8 +37,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("facem-low.off") + 1); 
-	strcpy(x, "facem-low.off");
+	char* x = (char*)malloc(strlen("face-low.off") + 1); 
+	strcpy(x, "face-low.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -234,43 +234,6 @@ int main(int, char ** argv)
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Boundary edges: " << duration << " seconds" << endl;
 
-	// find the outermost boundary, to get rid of the hole vertices end up
-	// being on the boundary
-	// use minDist vertex to first seed vertex
-	/*
-	 * while(currentDiskPoint < boundaryIndices.size() )
-	{
-		float minDist = FLT_MAX;
-		minBoundaryIdx = -1;
-		auto neighbours = mesh->verts[selectedIndex]->vertList;
-		for(int i = 0; i < neighbours.size(); ++i)
-		{
-			auto neighbourIdx = neighbours[i];
-			if(isVertexBoundary[neighbourIdx])
-			{
-				if(distances[selectedIndex][neighbourIdx] < minDist)
-				{
-					minDist = distances[selectedIndex][neighbourIdx];
-					minBoundaryIdx = neighbourIdx;
-					isVertexBoundary[neighbourIdx] = false;
-				}
-				
-			}
-		}
-		if (minBoundaryIdx != -1) {
-			bx(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].first;
-			by(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].second;
-			selectedIndex = minBoundaryIdx;
-		}
-		else
-		{
-			bx(selectedIndex, 0) = diskPoints[currentDiskPoint].first;
-			by(selectedIndex, 0) = diskPoints[currentDiskPoint].second;
-		}
-		currentDiskPoint++;
-	}
-	 */
-
 	std::vector<int> firstSetIndices;
 	std::set<int> firstSet;
 	firstSetIndices.push_back(boundaryIndices[0]);
@@ -318,7 +281,15 @@ int main(int, char ** argv)
 			secondSetIndices.push_back(boundaryIndices[i]);
 		}
 	}
+	bool useSymmetricTriangles = false;
 	if (firstSetIndices.size() != boundaryIndices.size()) {
+		int symmetric = -1;
+		while (symmetric != 0 && symmetric != 1) {
+			std::cout << "The mesh contains holes. Should I use symmetric triangles? 0 -> No, 1 -> Yes" << std::endl;
+			cin >> symmetric;
+		}
+		if (symmetric == 0) useSymmetricTriangles = false;
+		else if (symmetric == 1) useSymmetricTriangles = true;
 		float bboxFirstMin[3], bboxFirstMax[3], bboxSecondMin[3], bboxSecondMax[3];
 		bboxFirstMin[0] = FLT_MAX; bboxFirstMin[1] = FLT_MAX; bboxFirstMin[2] = FLT_MAX;
 		bboxFirstMax[0] = FLT_MIN; bboxFirstMax[1] = FLT_MIN; bboxFirstMax[2] = FLT_MIN;
@@ -354,416 +325,579 @@ int main(int, char ** argv)
 		const auto bboxSecondLen = sqrt(bboxSecondXSqr + bboxSecondYSqr + bboxSecondZSqr);
 
 		if (bboxFirstLen > bboxSecondLen)
+		{
 			boundaryIndices = firstSetIndices;
+			for(int j = 0; j < secondSetIndices.size(); ++j){
+				isVertexBoundary[secondSetIndices[j]] = false;
+			}
+		}
 		else
+		{
 			boundaryIndices = secondSetIndices;
+			for (int j = 0; j < firstSetIndices.size(); ++j) {
+				isVertexBoundary[firstSetIndices[j]] = false;
+			}
+		}
+		
 	}
 	
 	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
 		xy(numVertices, 1), by(numVertices, 1);
 	t0 = chrono::high_resolution_clock::now();
 
+	int mode = -1;
+	std::cout << "Enter mode: 0 -> Uniform, 1 -> Harmonic, 2 -> Mean Value" << endl;
+	while(mode != 0 && mode != 1 && mode != 2)
+	{
+		cin >> mode;
+	}
+	if (mode == 0) {
 #pragma region uniform
-	for (int i = 0; i < numVertices; i++) {
-		for (int j = 0; j < numVertices; j++) {
-			if (isVertexBoundary[i]) {
-				w(i, j) = i == j ? 1 : 0;
-				continue;
-			}
-			if (i == j) {
-				w(i, j) = (double)verts[i]->vertList.size() * -1.0;
-				continue;
-			}
-			w(i, j) = 0;
-			for (const auto &k : verts[i]->vertList) {
-				if (k == j) {
-					w(i, j) = 1;
-					break;
+		for (int i = 0; i < numVertices; i++) {
+			for (int j = 0; j < numVertices; j++) {
+				if (isVertexBoundary[i]) {
+					w(i, j) = i == j ? 1 : 0;
+					continue;
 				}
-			}
-		}
-	}
-#pragma endregion
-
-	/*
-#pragma region harmonic
-	std::vector<int> nonBoundaryIndices;
-	for(int i = 0; i < numVertices; ++i){
-		if(!isVertexBoundary[i]){
-			nonBoundaryIndices.push_back(i);
-		}
-		for(int j = 0; j < numVertices; ++j){
-			if(isVertexBoundary[i]){
-				if(i == j){
-					w(i, j) = 1;
-				}
-				else{
-					w(i, j) = 0;
-				}
-			}
-			else{
-				w(i, j) = 0;
-			}
-		}
-	}
-	for(int i = 0; i < nonBoundaryIndices.size(); ++i){
-		const auto vertexId = nonBoundaryIndices[i];
-		const auto neighbouringEdges = mesh->verts[vertexId]->edgeList;
-		const auto neighbouringTris = mesh->verts[vertexId]->triList;
-		if(neighbouringTris.size() < 2){
-			std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to less than 2 triangles" << std::endl;
-			continue;
-		}
-		for(int j = 0; j < neighbouringEdges.size(); ++j){
-			std::vector<int> triangleIndices;
-			const int ev1 = mesh->edges[neighbouringEdges[j]]->v1i;
-			const int ev2 = mesh->edges[neighbouringEdges[j]]->v2i;
-			for(int k = 0; k < neighbouringTris.size(); ++k){
-				const int tv1 = mesh->tris[neighbouringTris[k]]->v1i;
-				const int tv2 = mesh->tris[neighbouringTris[k]]->v2i;
-				const int tv3 = mesh->tris[neighbouringTris[k]]->v3i;
-				if (ev1 == tv1) {
-					if (ev2 == tv2 || ev2 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-						continue;
-					}
-				}
-				else if (ev1 == tv2) {
-					if (ev2 == tv1 || ev2 == tv2) {
-						triangleIndices.push_back(neighbouringTris[k]); 
-						continue;
-					}
-				}
-				else if (ev1 == tv3) {
-					if (ev2 == tv1 || ev2 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]); 
-						continue;
-					}
-				}
-				if (ev2 == tv1) {
-					if (ev1 == tv2 || ev1 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-					}
-				}
-				else if (ev2 == tv2) {
-					if (ev1 == tv1 || ev1 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-					}
-				}
-				else if (ev2 == tv3) {
-					if (ev1 == tv1 || ev1 == tv2) {
-						triangleIndices.push_back(neighbouringTris[k]);
-					}
-				}
-			}
-			if(triangleIndices.size() == 2){
-				auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
-				auto secondTriangleIdx = mesh->tris[triangleIndices[1]];
-				int firstTriangleOtherVertexIdx = -1;
-				int secondTriangleOtherVertexIdx = -1;
-				if(firstTriangleIdx->v1i == ev1){
-					if(firstTriangleIdx->v2i == ev2){
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
-					}
-					else{
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
-					}
-				}
-				else if(firstTriangleIdx->v2i == ev1){
-					if (firstTriangleIdx->v1i == ev2) {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
-					}
-					else {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
-					}
-				}
-				else{
-					if (firstTriangleIdx->v2i == ev2) {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
-					}
-					else {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
-					}
-				}
-				if (secondTriangleIdx->v1i == ev1) {
-					if (secondTriangleIdx->v2i == ev2) {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
-					}
-					else {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
-					}
-				}
-				else if (secondTriangleIdx->v2i == ev1) {
-					if (secondTriangleIdx->v1i == ev2) {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
-					}
-					else {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
-					}
-				}
-				else {
-					if (secondTriangleIdx->v2i == ev2) {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
-					}
-					else {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
-					}
-				}
-				auto x1 = mesh->verts[ev1]->coords[0] - mesh->verts[firstTriangleOtherVertexIdx]->coords[0];
-				auto y1 = mesh->verts[ev1]->coords[1] - mesh->verts[firstTriangleOtherVertexIdx]->coords[1];
-				auto z1 = mesh->verts[ev1]->coords[2] - mesh->verts[firstTriangleOtherVertexIdx]->coords[2];
-				auto x2 = mesh->verts[ev2]->coords[0] - mesh->verts[firstTriangleOtherVertexIdx]->coords[0];
-				auto y2 = mesh->verts[ev2]->coords[1] - mesh->verts[firstTriangleOtherVertexIdx]->coords[1];
-				auto z2 = mesh->verts[ev2]->coords[2] - mesh->verts[firstTriangleOtherVertexIdx]->coords[2];
-				auto dot = x1 * x2 + y1 * y2 + z1 * z2;
-				auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
-				auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
-				auto angle = acos(dot / sqrt(lenSq1 * lenSq2));
-				if (angle < 0) angle += 2 * M_PI;
-				auto cotangent1 = cos(angle) / sin(angle);
-				x1 = mesh->verts[ev1]->coords[0] - mesh->verts[secondTriangleOtherVertexIdx]->coords[0];
-				y1 = mesh->verts[ev1]->coords[1] - mesh->verts[secondTriangleOtherVertexIdx]->coords[1];
-				z1 = mesh->verts[ev1]->coords[2] - mesh->verts[secondTriangleOtherVertexIdx]->coords[2];
-				x2 = mesh->verts[ev2]->coords[0] - mesh->verts[secondTriangleOtherVertexIdx]->coords[0];
-				y2 = mesh->verts[ev2]->coords[1] - mesh->verts[secondTriangleOtherVertexIdx]->coords[1];
-				z2 = mesh->verts[ev2]->coords[2] - mesh->verts[secondTriangleOtherVertexIdx]->coords[2];
-				dot = x1 * x2 + y1 * y2 + z1 * z2;
-				lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
-				lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
-				angle = acos(dot / sqrt(lenSq1 * lenSq2));
-				if (angle < 0) angle += 2 * M_PI;
-				auto cotangent2 = cos(angle) / sin(angle);
-				if(vertexId == ev1){
-					w(ev1, ev2) = (cotangent1 + cotangent2) * 0.5f;
-				}
-				else{
-					w(ev2, ev1) = (cotangent1 + cotangent2) * 0.5f;
-				}
-			}
-			else{
-				std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to " << triangleIndices.size() << " triangles" << std::endl;
-			}
-		}
-	}
-	for(int i = 0; i < numVertices; ++i)
-	{
-		if (isVertexBoundary[i]) continue;
-		double sum = 0.0;
-		for(int j = 0; j < numVertices; ++j)
-		{
-			sum += w(i, j);
-		}
-		w(i, i) = -sum;
-	}
-#pragma endregion
-*/
-	/*
-#pragma region meanvalueweights
-	std::vector<int> nonBoundaryIndices;
-	for (int i = 0; i < numVertices; ++i) {
-		if (!isVertexBoundary[i]) {
-			nonBoundaryIndices.push_back(i);
-		}
-		for (int j = 0; j < numVertices; ++j) {
-			if (isVertexBoundary[i]) {
 				if (i == j) {
-					w(i, j) = 1;
+					w(i, j) = (double)verts[i]->vertList.size() * -1.0;
+					continue;
+				}
+				w(i, j) = 0;
+				for (const auto &k : verts[i]->vertList) {
+					if (k == j) {
+						w(i, j) = 1;
+						break;
+					}
+				}
+			}
+		}
+#pragma endregion
+	}
+	else if (mode == 1) {
+#pragma region harmonic
+		std::vector<int> nonBoundaryIndices;
+		for (int i = 0; i < numVertices; ++i) {
+			if (!isVertexBoundary[i]) {
+				nonBoundaryIndices.push_back(i);
+			}
+			for (int j = 0; j < numVertices; ++j) {
+				if (isVertexBoundary[i]) {
+					if (i == j) {
+						w(i, j) = 1;
+					}
+					else {
+						w(i, j) = 0;
+					}
 				}
 				else {
 					w(i, j) = 0;
 				}
 			}
-			else {
-				w(i, j) = 0;
-			}
 		}
-	}
-	for (int i = 0; i < nonBoundaryIndices.size(); ++i) {
-		const auto vertexId = nonBoundaryIndices[i];
-		const auto neighbouringEdges = mesh->verts[vertexId]->edgeList;
-		const auto neighbouringTris = mesh->verts[vertexId]->triList;
-		if (neighbouringTris.size() < 2) {
-			std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to less than 2 triangles" << std::endl;
-			continue;
-		}
-		for (int j = 0; j < neighbouringEdges.size(); ++j) {
-			std::vector<int> triangleIndices;
-			const int ev1 = mesh->edges[neighbouringEdges[j]]->v1i;
-			const int ev2 = mesh->edges[neighbouringEdges[j]]->v2i;
-			for (int k = 0; k < neighbouringTris.size(); ++k) {
-				const int tv1 = mesh->tris[neighbouringTris[k]]->v1i;
-				const int tv2 = mesh->tris[neighbouringTris[k]]->v2i;
-				const int tv3 = mesh->tris[neighbouringTris[k]]->v3i;
-				if (ev1 == tv1) {
-					if (ev2 == tv2 || ev2 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-						continue;
-					}
-				}
-				else if (ev1 == tv2) {
-					if (ev2 == tv1 || ev2 == tv2) {
-						triangleIndices.push_back(neighbouringTris[k]);
-						continue;
-					}
-				}
-				else if (ev1 == tv3) {
-					if (ev2 == tv1 || ev2 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-						continue;
-					}
-				}
-				if (ev2 == tv1) {
-					if (ev1 == tv2 || ev1 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-					}
-				}
-				else if (ev2 == tv2) {
-					if (ev1 == tv1 || ev1 == tv3) {
-						triangleIndices.push_back(neighbouringTris[k]);
-					}
-				}
-				else if (ev2 == tv3) {
-					if (ev1 == tv1 || ev1 == tv2) {
-						triangleIndices.push_back(neighbouringTris[k]);
-					}
-				}
+		for (int i = 0; i < nonBoundaryIndices.size(); ++i) {
+			const auto vertexId = nonBoundaryIndices[i];
+			const auto neighbouringEdges = mesh->verts[vertexId]->edgeList;
+			const auto neighbouringTris = mesh->verts[vertexId]->triList;
+			if (neighbouringTris.size() < 2) {
+				std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to less than 2 triangles" << std::endl;
+				continue;
 			}
-			if (triangleIndices.size() == 2) {
-				auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
-				auto secondTriangleIdx = mesh->tris[triangleIndices[1]];
-				int firstTriangleOtherVertexIdx = -1;
-				int secondTriangleOtherVertexIdx = -1;
-				if (firstTriangleIdx->v1i == ev1) {
-					if (firstTriangleIdx->v2i == ev2) {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+			for (int j = 0; j < neighbouringEdges.size(); ++j) {
+				std::vector<int> triangleIndices;
+				const int ev1 = mesh->edges[neighbouringEdges[j]]->v1i;
+				const int ev2 = mesh->edges[neighbouringEdges[j]]->v2i;
+				for (int k = 0; k < neighbouringTris.size(); ++k) {
+					const int tv1 = mesh->tris[neighbouringTris[k]]->v1i;
+					const int tv2 = mesh->tris[neighbouringTris[k]]->v2i;
+					const int tv3 = mesh->tris[neighbouringTris[k]]->v3i;
+					if (ev1 == tv1) {
+						if (ev2 == tv2 || ev2 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+							continue;
+						}
 					}
-					else {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+					else if (ev1 == tv2) {
+						if (ev2 == tv1 || ev2 == tv2) {
+							triangleIndices.push_back(neighbouringTris[k]);
+							continue;
+						}
 					}
-				}
-				else if (firstTriangleIdx->v2i == ev1) {
-					if (firstTriangleIdx->v1i == ev2) {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+					else if (ev1 == tv3) {
+						if (ev2 == tv1 || ev2 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+							continue;
+						}
 					}
-					else {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+					if (ev2 == tv1) {
+						if (ev1 == tv2 || ev1 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+						}
 					}
-				}
-				else {
-					if (firstTriangleIdx->v2i == ev2) {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+					else if (ev2 == tv2) {
+						if (ev1 == tv1 || ev1 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+						}
 					}
-					else {
-						firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
-					}
-				}
-				if (secondTriangleIdx->v1i == ev1) {
-					if (secondTriangleIdx->v2i == ev2) {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
-					}
-					else {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
-					}
-				}
-				else if (secondTriangleIdx->v2i == ev1) {
-					if (secondTriangleIdx->v1i == ev2) {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
-					}
-					else {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+					else if (ev2 == tv3) {
+						if (ev1 == tv1 || ev1 == tv2) {
+							triangleIndices.push_back(neighbouringTris[k]);
+						}
 					}
 				}
-				else {
-					if (secondTriangleIdx->v2i == ev2) {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+				if (triangleIndices.size() == 2) {
+					auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
+					auto secondTriangleIdx = mesh->tris[triangleIndices[1]];
+					int firstTriangleOtherVertexIdx = -1;
+					int secondTriangleOtherVertexIdx = -1;
+					if (firstTriangleIdx->v1i == ev1) {
+						if (firstTriangleIdx->v2i == ev2) {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+						}
+						else {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+						}
+					}
+					else if (firstTriangleIdx->v2i == ev1) {
+						if (firstTriangleIdx->v1i == ev2) {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+						}
+						else {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+						}
 					}
 					else {
-						secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+						if (firstTriangleIdx->v2i == ev2) {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+						}
+						else {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+						}
 					}
-				}
-				float x1, y1, z1, x2, y2, z2, angle, tangent1, tangent2;
-				if (vertexId == ev1)
-				{
-					x1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
-					y1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
-					z1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
-					x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
-					y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
-					z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+					if (secondTriangleIdx->v1i == ev1) {
+						if (secondTriangleIdx->v2i == ev2) {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
+						}
+						else {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+						}
+					}
+					else if (secondTriangleIdx->v2i == ev1) {
+						if (secondTriangleIdx->v1i == ev2) {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
+						}
+						else {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+						}
+					}
+					else {
+						if (secondTriangleIdx->v2i == ev2) {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+						}
+						else {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+						}
+					}
+					auto x1 = mesh->verts[ev1]->coords[0] - mesh->verts[firstTriangleOtherVertexIdx]->coords[0];
+					auto y1 = mesh->verts[ev1]->coords[1] - mesh->verts[firstTriangleOtherVertexIdx]->coords[1];
+					auto z1 = mesh->verts[ev1]->coords[2] - mesh->verts[firstTriangleOtherVertexIdx]->coords[2];
+					auto x2 = mesh->verts[ev2]->coords[0] - mesh->verts[firstTriangleOtherVertexIdx]->coords[0];
+					auto y2 = mesh->verts[ev2]->coords[1] - mesh->verts[firstTriangleOtherVertexIdx]->coords[1];
+					auto z2 = mesh->verts[ev2]->coords[2] - mesh->verts[firstTriangleOtherVertexIdx]->coords[2];
 					auto dot = x1 * x2 + y1 * y2 + z1 * z2;
 					auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
 					auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
-					angle = acos(dot / sqrt(lenSq1 * lenSq2));
+					auto angle = acos(dot / sqrt(lenSq1 * lenSq2));
 					if (angle < 0) angle += 2 * M_PI;
-					tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
-					x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
-					y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
-					z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
-					x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
-					y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
-					z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+					auto cotangent1 = cos(angle) / sin(angle);
+					x1 = mesh->verts[ev1]->coords[0] - mesh->verts[secondTriangleOtherVertexIdx]->coords[0];
+					y1 = mesh->verts[ev1]->coords[1] - mesh->verts[secondTriangleOtherVertexIdx]->coords[1];
+					z1 = mesh->verts[ev1]->coords[2] - mesh->verts[secondTriangleOtherVertexIdx]->coords[2];
+					x2 = mesh->verts[ev2]->coords[0] - mesh->verts[secondTriangleOtherVertexIdx]->coords[0];
+					y2 = mesh->verts[ev2]->coords[1] - mesh->verts[secondTriangleOtherVertexIdx]->coords[1];
+					z2 = mesh->verts[ev2]->coords[2] - mesh->verts[secondTriangleOtherVertexIdx]->coords[2];
 					dot = x1 * x2 + y1 * y2 + z1 * z2;
 					lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
 					lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
 					angle = acos(dot / sqrt(lenSq1 * lenSq2));
 					if (angle < 0) angle += 2 * M_PI;
-					tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
-				}
-				else
-				{
-					x1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
-					y1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
-					z1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
-					x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
-					y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
-					z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
-					auto dot = x1 * x2 + y1 * y2 + z1 * z2;
-					auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
-					auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
-					angle = acos(dot / sqrt(lenSq1 * lenSq2));
-					if (angle < 0) angle += 2 * M_PI;
-					tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
-					x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
-					y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
-					z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
-					x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
-					y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
-					z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
-					dot = x1 * x2 + y1 * y2 + z1 * z2;
-					lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
-					lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
-					angle = acos(dot / sqrt(lenSq1 * lenSq2));
-					if (angle < 0) angle += 2 * M_PI;
-					tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
-				}
-				auto xsq = pow(mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0], 2.0);
-				auto ysq = pow(mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1], 2.0);
-				auto zsq = pow(mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2], 2.0);
-				auto len = sqrt(xsq + ysq + zsq);
-				if (vertexId == ev1) {
-					w(ev1, ev2) = (tangent1 + tangent2) / (2.0f * len);
+					auto cotangent2 = cos(angle) / sin(angle);
+					if (vertexId == ev1) {
+						w(ev1, ev2) = (cotangent1 + cotangent2) * 0.5f;
+					}
+					else {
+						w(ev2, ev1) = (cotangent1 + cotangent2) * 0.5f;
+					}
 				}
 				else {
-					w(ev2, ev1) = (tangent1 + tangent2) / (2.0f * len);
+					std::cout << "Vertex " << vertexId << " : non-boundary hole vertex belongs to " << triangleIndices.size() << " triangles" << std::endl;
+					if (useSymmetricTriangles) {
+						std::cout << "But I'll override with symmetric triangle" << std::endl;
+						auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
+						int firstTriangleOtherVertexIdx = -1;
+						if (firstTriangleIdx->v1i == ev1) {
+							if (firstTriangleIdx->v2i == ev2) {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+							}
+							else {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+							}
+						}
+						else if (firstTriangleIdx->v2i == ev1) {
+							if (firstTriangleIdx->v1i == ev2) {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+							}
+							else {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+							}
+						}
+						else {
+							if (firstTriangleIdx->v2i == ev2) {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+							}
+							else {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+							}
+						}
+						auto x1 = mesh->verts[ev1]->coords[0] - mesh->verts[firstTriangleOtherVertexIdx]->coords[0];
+						auto y1 = mesh->verts[ev1]->coords[1] - mesh->verts[firstTriangleOtherVertexIdx]->coords[1];
+						auto z1 = mesh->verts[ev1]->coords[2] - mesh->verts[firstTriangleOtherVertexIdx]->coords[2];
+						auto x2 = mesh->verts[ev2]->coords[0] - mesh->verts[firstTriangleOtherVertexIdx]->coords[0];
+						auto y2 = mesh->verts[ev2]->coords[1] - mesh->verts[firstTriangleOtherVertexIdx]->coords[1];
+						auto z2 = mesh->verts[ev2]->coords[2] - mesh->verts[firstTriangleOtherVertexIdx]->coords[2];
+						auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+						auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+						auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+						auto angle = acos(dot / sqrt(lenSq1 * lenSq2));
+						if (angle < 0) {
+							angle += 2 * M_PI;
+						}
+						auto cotangent1 = cos(angle) / sin(angle);
+						auto cotangent2 = cos(angle) / sin(angle);
+						if (vertexId == ev1) {
+							w(ev1, ev2) = (cotangent1) * 0.5f;
+						}
+						else {
+							w(ev2, ev1) = (cotangent1) * 0.5f;
+						}
+					}
 				}
 			}
-			else {
-				std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to " << triangleIndices.size() << " triangles" << std::endl;
-			}
 		}
-	}
-	for (int i = 0; i < numVertices; ++i)
-	{
-		if (isVertexBoundary[i]) continue;
-		double sum = 0.0;
-		for (int j = 0; j < numVertices; ++j)
+		for (int i = 0; i < numVertices; ++i)
 		{
-			sum += w(i, j);
+			if (isVertexBoundary[i]) continue;
+			double sum = 0.0;
+			for (int j = 0; j < numVertices; ++j)
+			{
+				sum += w(i, j);
+			}
+			w(i, i) = -sum;
 		}
-		w(i, i) = -sum;
-	}
 #pragma endregion
-*/
+	}
+	else if (mode == 2) {
+#pragma region meanvalueweights
+		std::vector<int> nonBoundaryIndices;
+		for (int i = 0; i < numVertices; ++i) {
+			if (!isVertexBoundary[i]) {
+				nonBoundaryIndices.push_back(i);
+			}
+			for (int j = 0; j < numVertices; ++j) {
+				if (isVertexBoundary[i]) {
+					if (i == j) {
+						w(i, j) = 1;
+					}
+					else {
+						w(i, j) = 0;
+					}
+				}
+				else {
+					w(i, j) = 0;
+				}
+			}
+		}
+		for (int i = 0; i < nonBoundaryIndices.size(); ++i) {
+			const auto vertexId = nonBoundaryIndices[i];
+			const auto neighbouringEdges = mesh->verts[vertexId]->edgeList;
+			const auto neighbouringTris = mesh->verts[vertexId]->triList;
+			if (neighbouringTris.size() < 2) {
+				std::cout << "error on vertex " << vertexId << " : non-boundary vertex belongs to less than 2 triangles" << std::endl;
+				continue;
+			}
+			for (int j = 0; j < neighbouringEdges.size(); ++j) {
+				std::vector<int> triangleIndices;
+				const int ev1 = mesh->edges[neighbouringEdges[j]]->v1i;
+				const int ev2 = mesh->edges[neighbouringEdges[j]]->v2i;
+				for (int k = 0; k < neighbouringTris.size(); ++k) {
+					const int tv1 = mesh->tris[neighbouringTris[k]]->v1i;
+					const int tv2 = mesh->tris[neighbouringTris[k]]->v2i;
+					const int tv3 = mesh->tris[neighbouringTris[k]]->v3i;
+					if (ev1 == tv1) {
+						if (ev2 == tv2 || ev2 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+							continue;
+						}
+					}
+					else if (ev1 == tv2) {
+						if (ev2 == tv1 || ev2 == tv2) {
+							triangleIndices.push_back(neighbouringTris[k]);
+							continue;
+						}
+					}
+					else if (ev1 == tv3) {
+						if (ev2 == tv1 || ev2 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+							continue;
+						}
+					}
+					if (ev2 == tv1) {
+						if (ev1 == tv2 || ev1 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+						}
+					}
+					else if (ev2 == tv2) {
+						if (ev1 == tv1 || ev1 == tv3) {
+							triangleIndices.push_back(neighbouringTris[k]);
+						}
+					}
+					else if (ev2 == tv3) {
+						if (ev1 == tv1 || ev1 == tv2) {
+							triangleIndices.push_back(neighbouringTris[k]);
+						}
+					}
+				}
+				if (triangleIndices.size() == 2) {
+					auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
+					auto secondTriangleIdx = mesh->tris[triangleIndices[1]];
+					int firstTriangleOtherVertexIdx = -1;
+					int secondTriangleOtherVertexIdx = -1;
+					if (firstTriangleIdx->v1i == ev1) {
+						if (firstTriangleIdx->v2i == ev2) {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+						}
+						else {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+						}
+					}
+					else if (firstTriangleIdx->v2i == ev1) {
+						if (firstTriangleIdx->v1i == ev2) {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+						}
+						else {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+						}
+					}
+					else {
+						if (firstTriangleIdx->v2i == ev2) {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+						}
+						else {
+							firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+						}
+					}
+					if (secondTriangleIdx->v1i == ev1) {
+						if (secondTriangleIdx->v2i == ev2) {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
+						}
+						else {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+						}
+					}
+					else if (secondTriangleIdx->v2i == ev1) {
+						if (secondTriangleIdx->v1i == ev2) {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v3i;
+						}
+						else {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+						}
+					}
+					else {
+						if (secondTriangleIdx->v2i == ev2) {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v1i;
+						}
+						else {
+							secondTriangleOtherVertexIdx = secondTriangleIdx->v2i;
+						}
+					}
+					float x1, y1, z1, x2, y2, z2, angle, tangent1, tangent2;
+					if (vertexId == ev1)
+					{
+						x1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
+						y1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
+						z1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
+						x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
+						y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
+						z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+						auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+						auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+						auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+						angle = acos(dot / sqrt(lenSq1 * lenSq2));
+						if (angle < 0) angle += 2 * M_PI;
+						tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
+						x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
+						y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
+						z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
+						x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
+						y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
+						z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+						dot = x1 * x2 + y1 * y2 + z1 * z2;
+						lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+						lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+						angle = acos(dot / sqrt(lenSq1 * lenSq2));
+						if (angle < 0) angle += 2 * M_PI;
+						tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
+					}
+					else
+					{
+						x1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
+						y1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
+						z1 = mesh->verts[secondTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
+						x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
+						y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
+						z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
+						auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+						auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+						auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+						angle = acos(dot / sqrt(lenSq1 * lenSq2));
+						if (angle < 0) angle += 2 * M_PI;
+						tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
+						x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
+						y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
+						z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
+						x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
+						y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
+						z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
+						dot = x1 * x2 + y1 * y2 + z1 * z2;
+						lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+						lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+						angle = acos(dot / sqrt(lenSq1 * lenSq2));
+						if (angle < 0) angle += 2 * M_PI;
+						tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
+					}
+					auto xsq = pow(mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0], 2.0);
+					auto ysq = pow(mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1], 2.0);
+					auto zsq = pow(mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2], 2.0);
+					auto len = sqrt(xsq + ysq + zsq);
+					if (vertexId == ev1) {
+						w(ev1, ev2) = (tangent1 + tangent2) / (2.0f * len);
+					}
+					else {
+						w(ev2, ev1) = (tangent1 + tangent2) / (2.0f * len);
+					}
+				}
+				else {
+					std::cout << "Vertex " << vertexId << " : non-boundary vertex belongs to " << triangleIndices.size() << " triangles" << std::endl;
+					if (useSymmetricTriangles)
+					{
+						std::cout << "But I'll override with a symmetric triangle" << std::endl;
+						auto firstTriangleIdx = mesh->tris[triangleIndices[0]];
+						int firstTriangleOtherVertexIdx = -1;
+						if (firstTriangleIdx->v1i == ev1) {
+							if (firstTriangleIdx->v2i == ev2) {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+							}
+							else {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+							}
+						}
+						else if (firstTriangleIdx->v2i == ev1) {
+							if (firstTriangleIdx->v1i == ev2) {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v3i;
+							}
+							else {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+							}
+						}
+						else {
+							if (firstTriangleIdx->v2i == ev2) {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v1i;
+							}
+							else {
+								firstTriangleOtherVertexIdx = firstTriangleIdx->v2i;
+							}
+						}
+						float x1, y1, z1, x2, y2, z2, angle, tangent1, tangent2;
+						if (vertexId == ev1)
+						{
+							x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
+							y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
+							z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
+							x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
+							y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
+							z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+							auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+							auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+							auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+							angle = acos(dot / sqrt(lenSq1 * lenSq2));
+							if (angle < 0) angle += 2 * M_PI;
+							tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
+							x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev1]->coords[0];
+							y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev1]->coords[1];
+							z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev1]->coords[2];
+							x2 = mesh->verts[ev2]->coords[0] - mesh->verts[ev1]->coords[0];
+							y2 = mesh->verts[ev2]->coords[1] - mesh->verts[ev1]->coords[1];
+							z2 = mesh->verts[ev2]->coords[2] - mesh->verts[ev1]->coords[2];
+							dot = x1 * x2 + y1 * y2 + z1 * z2;
+							lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+							lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+							angle = acos(dot / sqrt(lenSq1 * lenSq2));
+							if (angle < 0) angle += 2 * M_PI;
+							tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
+						}
+						else
+						{
+							x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
+							y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
+							z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
+							x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
+							y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
+							z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
+							auto dot = x1 * x2 + y1 * y2 + z1 * z2;
+							auto lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+							auto lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+							angle = acos(dot / sqrt(lenSq1 * lenSq2));
+							if (angle < 0) angle += 2 * M_PI;
+							tangent1 = sin(angle * 0.5f) / cos(angle * 0.5f);
+							x1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[0] - mesh->verts[ev2]->coords[0];
+							y1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[1] - mesh->verts[ev2]->coords[1];
+							z1 = mesh->verts[firstTriangleOtherVertexIdx]->coords[2] - mesh->verts[ev2]->coords[2];
+							x2 = mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0];
+							y2 = mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1];
+							z2 = mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2];
+							dot = x1 * x2 + y1 * y2 + z1 * z2;
+							lenSq1 = x1 * x1 + y1 * y1 + z1 * z1;
+							lenSq2 = x2 * x2 + y2 * y2 + z2 * z2;
+							angle = acos(dot / sqrt(lenSq1 * lenSq2));
+							if (angle < 0) angle += 2 * M_PI;
+							tangent2 = sin(angle * 0.5f) / cos(angle * 0.5f);
+						}
+						auto xsq = pow(mesh->verts[ev1]->coords[0] - mesh->verts[ev2]->coords[0], 2.0);
+						auto ysq = pow(mesh->verts[ev1]->coords[1] - mesh->verts[ev2]->coords[1], 2.0);
+						auto zsq = pow(mesh->verts[ev1]->coords[2] - mesh->verts[ev2]->coords[2], 2.0);
+						auto len = sqrt(xsq + ysq + zsq);
+						if (vertexId == ev1) {
+							w(ev1, ev2) = (tangent1 + tangent2) / (2.0f * len);
+						}
+						else {
+							w(ev2, ev1) = (tangent1 + tangent2) / (2.0f * len);
+						}
+					}
+				}
+			}
+		}
+		for (int i = 0; i < numVertices; ++i)
+		{
+			if (isVertexBoundary[i]) continue;
+			double sum = 0.0;
+			for (int j = 0; j < numVertices; ++j)
+			{
+				sum += w(i, j);
+			}
+			w(i, i) = -sum;
+		}
+#pragma endregion
+	}
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Creating W matrix: " << duration << " seconds" << endl;
@@ -821,8 +955,6 @@ int main(int, char ** argv)
 		}
 		currentDiskPoint++;
 	}
-	//bx(selectedIndex, 0) = diskPoints[currentDiskPoint].first;
-	//by(selectedIndex, 0) = diskPoints[currentDiskPoint].second;
 	currentDiskPoint = 0;
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
@@ -833,22 +965,22 @@ int main(int, char ** argv)
 	{
 		if(isVertexBoundaryBackup[i] && (bx(i, 0) == 0.0 && by(i, 0) == 0.0))
 		{
-			std::cout << "ERROR BOUNDARY VERTEX " << i << " HAS 0 VAL" << std::endl;
+			std::cout << "WARNING BOUNDARY VERTEX " << i << " HAS 0 VAL" << std::endl;
 		}
 		else if(isVertexBoundaryBackup[i] == false && (bx(i, 0) != 0.0 || by(i, 0) != 0))
 		{
-			std::cout << "ERROR NON-BOUNDARY VERTEX " << i << " HAS NONZERO VAL" << std::endl;
+			std::cout << "WARNING NON-BOUNDARY VERTEX " << i << " HAS NONZERO VAL" << std::endl;
 		}
 	}
 
-	std::ofstream file("matrices.txt");
+	//std::ofstream file("matrices.txt");
 
-	file << "bx" << std::endl;
-	file << bx << std::endl;
-	file << "by" << std::endl;
-	file << by << std::endl;
-	file << "w" << std::endl;
-	file << w << std::endl;;
+	//file << "bx" << std::endl;
+	//file << bx << std::endl;
+	//file << "by" << std::endl;
+	//file << by << std::endl;
+	//file << "w" << std::endl;
+	//file << w << std::endl;;
 
 	currentDiskPoint = 0;
 	auto winverse = w.inverse();
@@ -868,11 +1000,11 @@ int main(int, char ** argv)
 	t1 = chrono::high_resolution_clock::now();
 	duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Solving xy: " << duration << " seconds" << endl;
-	file << "x" << std::endl;
-	file << xx << std::endl;
-	file << "y" << std::endl;
-	file << xy << std::endl;
-	file.close();
+	//file << "x" << std::endl;
+	//file << xx << std::endl;
+	//file << "y" << std::endl;
+	//file << xy << std::endl;
+	//file.close();
 	/*
 	FILE * pFile;
 	pFile = fopen("dijkstra_out.txt", "w");
@@ -1074,7 +1206,8 @@ int main(int, char ** argv)
 		}
 	}
 	*/
-	root->addChild( painter->getShapeSep(mesh) );
+	
+	//root->addChild( painter->getShapeSep(mesh) );
 	int visualization = 4;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
@@ -1095,7 +1228,7 @@ int main(int, char ** argv)
 	else if(visualization == 4)
 	{
 		mesh->samples = boundaryIndices;
-		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
 		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
