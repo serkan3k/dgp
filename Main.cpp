@@ -20,6 +20,9 @@
 #include <functional>
 #include <cmath>
 #include <fstream>
+#include <stack>
+#include <set>
+#include <algorithm>
 
 //using Eigen::MatrixXd;
 using namespace Eigen;
@@ -34,8 +37,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("face-low.off") + 1); 
-	strcpy(x, "face-low.off");
+	char* x = (char*)malloc(strlen("facem-low.off") + 1); 
+	strcpy(x, "facem-low.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -233,15 +236,129 @@ int main(int, char ** argv)
 
 	// find the outermost boundary, to get rid of the hole vertices end up
 	// being on the boundary
-	bool processingDone = false;
-	while (processingDone == false) {
-		for (int i = 0; i < boundaryIndices.size(); ++i) {
+	// use minDist vertex to first seed vertex
+	/*
+	 * while(currentDiskPoint < boundaryIndices.size() )
+	{
+		float minDist = FLT_MAX;
+		minBoundaryIdx = -1;
+		auto neighbours = mesh->verts[selectedIndex]->vertList;
+		for(int i = 0; i < neighbours.size(); ++i)
+		{
+			auto neighbourIdx = neighbours[i];
+			if(isVertexBoundary[neighbourIdx])
+			{
+				if(distances[selectedIndex][neighbourIdx] < minDist)
+				{
+					minDist = distances[selectedIndex][neighbourIdx];
+					minBoundaryIdx = neighbourIdx;
+					isVertexBoundary[neighbourIdx] = false;
+				}
+				
+			}
+		}
+		if (minBoundaryIdx != -1) {
+			bx(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].first;
+			by(minBoundaryIdx, 0) = diskPoints[currentDiskPoint].second;
+			selectedIndex = minBoundaryIdx;
+		}
+		else
+		{
+			bx(selectedIndex, 0) = diskPoints[currentDiskPoint].first;
+			by(selectedIndex, 0) = diskPoints[currentDiskPoint].second;
+		}
+		currentDiskPoint++;
+	}
+	 */
 
+	std::vector<int> firstSetIndices;
+	std::set<int> firstSet;
+	firstSetIndices.push_back(boundaryIndices[0]);
+	firstSet.insert(boundaryIndices[0]);
+	while(firstSetIndices.size() < boundaryIndices.size())
+	{
+		const auto top = firstSetIndices[firstSetIndices.size() - 1];
+		const auto neighbours = mesh->verts[top]->vertList;
+		std::vector<int> candidateVertices;
+		for(int i = 0; i < boundaryIndices.size(); ++i){
+			if (boundaryIndices[i] == top) continue;
+			bool isVertexCandidate = false;
+			for(int j = 0; j < neighbours.size(); ++j){
+				if(neighbours[j] == boundaryIndices[i]){
+					candidateVertices.push_back(boundaryIndices[i]);
+					break;
+				}
+			}
+		}
+		float minDist = FLT_MAX;
+		int nextIdx = -1;
+		if (candidateVertices.size() == 0) break;
+		for(int i = 0; i < candidateVertices.size(); ++i){
+			if(distances[top][candidateVertices[i]] < minDist){
+				bool isContained = false;
+				for(int j = 0; j < firstSetIndices.size(); ++j){
+					if(firstSetIndices[j] == candidateVertices[i]){
+						isContained = true;
+						break;
+					}
+				}
+				if (isContained == false) {
+					minDist = distances[top][candidateVertices[i]] < minDist;
+					nextIdx = candidateVertices[i];
+				}
+			}
+		}
+		if (nextIdx == -1) break;
+		firstSetIndices.push_back(nextIdx);
+		firstSet.insert(nextIdx);
+	}
+	vector<int> secondSetIndices;
+	for(int i = 0; i < boundaryIndices.size(); ++i){
+		if(firstSet.find(boundaryIndices[i]) == firstSet.end()){
+			secondSetIndices.push_back(boundaryIndices[i]);
 		}
 	}
+	if (firstSetIndices.size() != boundaryIndices.size()) {
+		float bboxFirstMin[3], bboxFirstMax[3], bboxSecondMin[3], bboxSecondMax[3];
+		bboxFirstMin[0] = FLT_MAX; bboxFirstMin[1] = FLT_MAX; bboxFirstMin[2] = FLT_MAX;
+		bboxFirstMax[0] = FLT_MIN; bboxFirstMax[1] = FLT_MIN; bboxFirstMax[2] = FLT_MIN;
+		for (int i = 0; i < firstSetIndices.size(); ++i) {
+			const auto coords = mesh->verts[firstSetIndices[i]]->coords;
+			bboxFirstMin[0] = min(bboxFirstMin[0], coords[0]);
+			bboxFirstMin[1] = min(bboxFirstMin[1], coords[1]);
+			bboxFirstMin[2] = min(bboxFirstMin[2], coords[2]);
+			bboxFirstMax[0] = max(bboxFirstMax[0], coords[0]);
+			bboxFirstMax[1] = max(bboxFirstMax[1], coords[1]);
+			bboxFirstMax[2] = max(bboxFirstMax[2], coords[2]);
+		}
+		bboxSecondMin[0] = FLT_MAX; bboxSecondMin[1] = FLT_MAX; bboxSecondMin[2] = FLT_MAX;
+		bboxSecondMax[0] = FLT_MIN; bboxSecondMax[1] = FLT_MIN; bboxSecondMax[2] = FLT_MIN;
+		for (int i = 0; i < secondSetIndices.size(); ++i) {
+			const auto coords = mesh->verts[firstSetIndices[i]]->coords;
+			bboxSecondMin[0] = min(bboxSecondMin[0], coords[0]);
+			bboxSecondMin[1] = min(bboxSecondMin[1], coords[1]);
+			bboxSecondMin[2] = min(bboxSecondMin[2], coords[2]);
+			bboxSecondMax[0] = max(bboxSecondMax[0], coords[0]);
+			bboxSecondMax[1] = max(bboxSecondMax[1], coords[1]);
+			bboxSecondMax[2] = max(bboxSecondMax[2], coords[2]);
+		}
 
+		const auto bboxFirstXSqr = pow(bboxFirstMin[0] - bboxFirstMax[0], 2.0);
+		const auto bboxFirstYSqr = pow(bboxFirstMin[1] - bboxFirstMax[1], 2.0);
+		const auto bboxFirstZSqr = pow(bboxFirstMin[2] - bboxFirstMax[2], 2.0);
+		const auto bboxFirstLen = sqrt(bboxFirstXSqr + bboxFirstYSqr + bboxFirstZSqr);
 
+		const auto bboxSecondXSqr = pow(bboxSecondMin[0] - bboxSecondMax[0], 2.0);
+		const auto bboxSecondYSqr = pow(bboxSecondMin[1] - bboxSecondMax[1], 2.0);
+		const auto bboxSecondZSqr = pow(bboxSecondMin[2] - bboxSecondMax[2], 2.0);
+		const auto bboxSecondLen = sqrt(bboxSecondXSqr + bboxSecondYSqr + bboxSecondZSqr);
 
+		if (bboxFirstLen > bboxSecondLen)
+			boundaryIndices = firstSetIndices;
+		else
+			boundaryIndices = secondSetIndices;
+	}
+	
 	MatrixXd w(numVertices, numVertices), xx(numVertices, 1), bx(numVertices, 1),
 		xy(numVertices, 1), by(numVertices, 1);
 	t0 = chrono::high_resolution_clock::now();
@@ -957,7 +1074,7 @@ int main(int, char ** argv)
 		}
 	}
 	*/
-	//root->addChild( painter->getShapeSep(mesh) );
+	root->addChild( painter->getShapeSep(mesh) );
 	int visualization = 4;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
@@ -978,7 +1095,7 @@ int main(int, char ** argv)
 	else if(visualization == 4)
 	{
 		mesh->samples = boundaryIndices;
-		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
+		root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
 		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
