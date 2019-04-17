@@ -323,7 +323,7 @@ int main(int, char ** argv)
 		const auto bboxSecondYSqr = pow(bboxSecondMin[1] - bboxSecondMax[1], 2.0);
 		const auto bboxSecondZSqr = pow(bboxSecondMin[2] - bboxSecondMax[2], 2.0);
 		const auto bboxSecondLen = sqrt(bboxSecondXSqr + bboxSecondYSqr + bboxSecondZSqr);
-
+		//
 		if (bboxFirstLen > bboxSecondLen)
 		{
 			boundaryIndices = firstSetIndices;
