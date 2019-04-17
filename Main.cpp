@@ -324,18 +324,28 @@ int main(int, char ** argv)
 		const auto bboxSecondZSqr = pow(bboxSecondMin[2] - bboxSecondMax[2], 2.0);
 		const auto bboxSecondLen = sqrt(bboxSecondXSqr + bboxSecondYSqr + bboxSecondZSqr);
 		//
+		int abandonSecondaryVertices = -1;
+		std::cout << "Should I abandon secondary vertices? 0 -> No, 1 -> Yes" << endl;
+		while(abandonSecondaryVertices != 0 && abandonSecondaryVertices != 1)
+		{
+			cin >> abandonSecondaryVertices;
+		}
 		if (bboxFirstLen > bboxSecondLen)
 		{
 			boundaryIndices = firstSetIndices;
-			for(int j = 0; j < secondSetIndices.size(); ++j){
-				isVertexBoundary[secondSetIndices[j]] = false;
+			if (abandonSecondaryVertices == 1) {
+				for (int j = 0; j < secondSetIndices.size(); ++j) {
+					isVertexBoundary[secondSetIndices[j]] = false;
+				}
 			}
 		}
 		else
 		{
 			boundaryIndices = secondSetIndices;
-			for (int j = 0; j < firstSetIndices.size(); ++j) {
-				isVertexBoundary[firstSetIndices[j]] = false;
+			if (abandonSecondaryVertices == 1) {
+				for (int j = 0; j < firstSetIndices.size(); ++j) {
+					isVertexBoundary[firstSetIndices[j]] = false;
+				}
 			}
 		}
 		
