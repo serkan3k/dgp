@@ -9,7 +9,8 @@
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Eigen/Dense>
-
+#include "glm/glm.hpp"
+#include "glm/ext/scalar_constants.inl"
 
 #include "Mesh.h"
 #include "Painter.h"
@@ -23,9 +24,50 @@
 #include <stack>
 #include <set>
 #include <algorithm>
+#include <random>
 
 //using Eigen::MatrixXd;
 using namespace Eigen;
+
+class Ray
+{
+public:
+	Ray();
+	Ray(glm::vec3 origin, glm::vec3 direction) : Origin(origin), Direction(direction){}
+	~Ray();
+	glm::vec3 Origin,
+			Direction;
+};
+
+Ray::Ray()
+{
+}
+
+Ray::~Ray()
+{
+}
+
+class RayHitInfo
+{
+public:
+	RayHitInfo();
+	~RayHitInfo();
+	Ray Ray;
+	glm::vec3 Normal,
+		HitPoint;
+	float T;
+	bool IsHit;
+	int HitTriangleIdx;
+};
+
+RayHitInfo::RayHitInfo()
+{
+}
+
+RayHitInfo::~RayHitInfo()
+{
+}
+
 
 int main(int, char ** argv)
 {
@@ -42,6 +84,81 @@ int main(int, char ** argv)
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
+
+	vector<glm::vec3> normals(mesh->tris.size());
+	vector<glm::vec3> centroids(mesh->tris.size());
+	vector<glm::vec3> negatedNormals(mesh->tris.size());
+	vector<vector<Ray>> rays(mesh->tris.size());
+
+	std::mt19937 generator;
+	std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+	for(unsigned i = 0; i < mesh->tris.size(); ++i)
+	{
+		auto v1Coords = mesh->verts[mesh->tris[i]->v1i]->coords;
+		auto v1x = v1Coords[0], v1y = v1Coords[1], v1z = v1Coords[2];
+		auto v2Coords = mesh->verts[mesh->tris[i]->v2i]->coords;
+		auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
+		auto v3Coords = mesh->verts[mesh->tris[i]->v3i]->coords;
+		auto v3x = v3Coords[0], v3y = v3Coords[1], v3z = v3Coords[2];
+		glm::vec3 center((v1x + v2x + v3x) / 3,
+					(v1y + v2y + v3y) / 3,
+					(	v1z + v2z + v3z) / 3);
+		centroids[i] = center;
+		auto ux = v2x - v1x, uy = v2y - v1y, uz = v2z - v1z;
+		auto vx = v3x - v1x, vy = v3y - v1y, vz = v3z - v1z;
+		auto nx = uy * vz - uz * vy; 
+		auto ny = uz * vx - ux * vz;
+		auto nz = ux * vy - uy * vx;
+		glm::vec3 normal(nx, ny, nz);
+		//normalize
+		normals[i] = glm::normalize(normal);
+		negatedNormals[i] = -normals[i];
+		rays[i].resize(30);
+		for(unsigned j = 0; j < rays[i].size(); ++j)
+		{
+			// rejection sampling, over the unit sphere, reject the ones that are not in cone
+			bool accepted = false;
+			while(!accepted)
+			{
+				// take samples over the unit sphere
+				float z = distribution(generator) * 2.0f - 1.0f;	// z uniformly distributed btw [-1, 1]
+				float t = distribution(generator) * 2.0f * glm::pi<float>();	// t uniformly distributed btw [0, 2pi)
+				float r = sqrt(1.0f - z * z);
+				float x = r * cos(t);
+				float y = r * sin(t);
+				glm::vec3 sampledVec(x, y, z);
+				float dotProduct = glm::dot(glm::normalize(negatedNormals[i]), glm::normalize(sampledVec));
+				float angleBetween = glm::acos(dotProduct);	// vector lengths are 1 since they are normals & normalized
+				if(glm::degrees(angleBetween) <= 60.0f)	//accept the sample
+				{
+					rays[i][j].Direction = glm::normalize(sampledVec);
+					accepted = true;
+				}
+			}
+			rays[i][j].Origin = centroids[i] + rays[i][j].Direction * (float)1e-6;	// some epsilon for robustness in intersection tests
+		}
+	}
+
+	for(unsigned i = 0; i < mesh->tris.size(); ++i)
+	{
+		const glm::vec3 v1(mesh->verts[mesh->tris[i]->v1i]->coords[0],
+						mesh->verts[mesh->tris[i]->v1i]->coords[1],
+						mesh->verts[mesh->tris[i]->v1i]->coords[2]);
+		const glm::vec3 v2(mesh->verts[mesh->tris[i]->v2i]->coords[0],
+			mesh->verts[mesh->tris[i]->v2i]->coords[1],
+			mesh->verts[mesh->tris[i]->v2i]->coords[2]); 
+		const glm::vec3 v3(mesh->verts[mesh->tris[i]->v3i]->coords[0],
+				mesh->verts[mesh->tris[i]->v3i]->coords[1],
+				mesh->verts[mesh->tris[i]->v3i]->coords[2]);
+		const glm::vec3 v1v2 = v2 - v1;
+		const glm::vec3 v1v3 = v3 - v1;
+		for(unsigned j = 0; j < rays[i].size(); ++j)
+		{
+			const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
+			const double d = glm::dot(v1v2, p);
+
+		}
+	}
 	
 
 	/*

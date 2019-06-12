@@ -76,11 +76,11 @@
     <IncludePath>D:\Projects\CENG\DGP\DGP\EIGENDIR;D:\Projects\CENG\DGP\Coin3D\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>D:\Projects\CENG\DGP\Coin3D\include;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Projects\CENG\DGP\DGP\EIGENDIR;D:\Projects\CENG\DGP\Coin3D\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Projects\CENG\DGP\Coin3D\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\Projects\CENG\DGP\Coin3D\include;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Projects\CENG\DGP\DGP\EIGENDIR;D:\Projects\CENG\DGP\Coin3D\include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Projects\CENG\DGP\Coin3D\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -135,10 +135,13 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>COIN_DLL;SOWIN_DLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>D:\Projects\CENG\DGP\Coin3D\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>coin2.lib;sowin1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,10 +152,13 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>COIN_DLL;SOWIN_DLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>D:\Projects\CENG\DGP\Coin3D\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>coin2.lib;sowin1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
