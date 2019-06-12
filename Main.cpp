@@ -139,24 +139,44 @@ int main(int, char ** argv)
 		}
 	}
 
-	for(unsigned i = 0; i < mesh->tris.size(); ++i)
+	for(unsigned i = 0; i < rays[i].size(); ++i)
 	{
-		const glm::vec3 v1(mesh->verts[mesh->tris[i]->v1i]->coords[0],
-						mesh->verts[mesh->tris[i]->v1i]->coords[1],
-						mesh->verts[mesh->tris[i]->v1i]->coords[2]);
-		const glm::vec3 v2(mesh->verts[mesh->tris[i]->v2i]->coords[0],
-			mesh->verts[mesh->tris[i]->v2i]->coords[1],
-			mesh->verts[mesh->tris[i]->v2i]->coords[2]); 
-		const glm::vec3 v3(mesh->verts[mesh->tris[i]->v3i]->coords[0],
-				mesh->verts[mesh->tris[i]->v3i]->coords[1],
-				mesh->verts[mesh->tris[i]->v3i]->coords[2]);
-		const glm::vec3 v1v2 = v2 - v1;
-		const glm::vec3 v1v3 = v3 - v1;
+		// initialize bins & weighted average stuff
 		for(unsigned j = 0; j < rays[i].size(); ++j)
 		{
-			const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
-			const double d = glm::dot(v1v2, p);
-
+			bool isHit = false;
+			float tmin = FLT_MAX;
+			for(unsigned k = 0; k < mesh->tris.size() && k != i; ++k)
+			{
+				const glm::vec3 v1(mesh->verts[mesh->tris[i]->v1i]->coords[0],
+					mesh->verts[mesh->tris[i]->v1i]->coords[1],
+					mesh->verts[mesh->tris[i]->v1i]->coords[2]);
+				const glm::vec3 v2(mesh->verts[mesh->tris[i]->v2i]->coords[0],
+					mesh->verts[mesh->tris[i]->v2i]->coords[1],
+					mesh->verts[mesh->tris[i]->v2i]->coords[2]);
+				const glm::vec3 v3(mesh->verts[mesh->tris[i]->v3i]->coords[0],
+					mesh->verts[mesh->tris[i]->v3i]->coords[1],
+					mesh->verts[mesh->tris[i]->v3i]->coords[2]);
+				const glm::vec3 v1v2 = v2 - v1;
+				const glm::vec3 v1v3 = v3 - v1;
+				const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
+				const double d = glm::dot(v1v2, p);
+				if(abs(d) < 0){ continue; }
+				const glm::vec3 t = rays[i][j].Origin - v1;
+				const double u = glm::dot(t, p) * (1.0f / d);
+				if(u < 0.0f && u > 1.0f){continue;}
+				const glm::vec3 q = glm::cross(t, v1v2);
+				const double v = glm::dot(rays[i][j].Direction, q) * (1.0f / d);
+				if (v < 0.0f && v > 1.0f) { continue; }
+				float dist = glm::dot(v1v3, q) * (1.0f / d);
+				if (dist < 0) { continue; }
+				isHit = true;
+				if(dist <= tmin)
+				{
+					tmin = dist;
+				}	// add termination condition for rays (from paper)
+			}
+			
 		}
 	}
 	
