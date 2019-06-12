@@ -170,11 +170,17 @@ int main(int, char ** argv)
 				if (v < 0.0f && v > 1.0f) { continue; }
 				float dist = glm::dot(v1v3, q) * (1.0f / d);
 				if (dist < 0) { continue; }
-				isHit = true;
 				if(dist <= tmin)
 				{
-					tmin = dist;
-				}	// add termination condition for rays (from paper)
+					glm::vec3 normalAtIntersection = -glm::normalize(glm::cross(v1v2, v1v3));	//inwards facing normal
+					float dotBetween = glm::dot(rays[i][j].Direction, normalAtIntersection);
+					if(glm::degrees(glm::acos(dotBetween)) >= 90.0f)	// termination condition for same direction facing normals
+					{
+						// add termination condition for rays (from paper)	
+						isHit = true;
+						tmin = dist;
+					}
+				}		
 			}
 			
 		}
