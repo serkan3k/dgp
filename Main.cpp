@@ -148,15 +148,15 @@ int main(int, char ** argv)
 			float tmin = FLT_MAX;
 			for(unsigned k = 0; k < mesh->tris.size() && k != i; ++k)
 			{
-				const glm::vec3 v1(mesh->verts[mesh->tris[i]->v1i]->coords[0],
-					mesh->verts[mesh->tris[i]->v1i]->coords[1],
-					mesh->verts[mesh->tris[i]->v1i]->coords[2]);
-				const glm::vec3 v2(mesh->verts[mesh->tris[i]->v2i]->coords[0],
-					mesh->verts[mesh->tris[i]->v2i]->coords[1],
-					mesh->verts[mesh->tris[i]->v2i]->coords[2]);
-				const glm::vec3 v3(mesh->verts[mesh->tris[i]->v3i]->coords[0],
-					mesh->verts[mesh->tris[i]->v3i]->coords[1],
-					mesh->verts[mesh->tris[i]->v3i]->coords[2]);
+				const glm::vec3 v1(mesh->verts[mesh->tris[k]->v1i]->coords[0],
+					mesh->verts[mesh->tris[k]->v1i]->coords[1],
+					mesh->verts[mesh->tris[k]->v1i]->coords[2]);
+				const glm::vec3 v2(mesh->verts[mesh->tris[k]->v2i]->coords[0],
+					mesh->verts[mesh->tris[k]->v2i]->coords[1],
+					mesh->verts[mesh->tris[k]->v2i]->coords[2]);
+				const glm::vec3 v3(mesh->verts[mesh->tris[k]->v3i]->coords[0],
+					mesh->verts[mesh->tris[k]->v3i]->coords[1],
+					mesh->verts[mesh->tris[k]->v3i]->coords[2]);
 				const glm::vec3 v1v2 = v2 - v1;
 				const glm::vec3 v1v3 = v3 - v1;
 				const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
