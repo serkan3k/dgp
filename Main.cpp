@@ -135,7 +135,7 @@ int main(int, char ** argv)
 					accepted = true;
 				}
 			}
-			rays[i][j].Origin = centroids[i]; //+ rays[i][j].Direction * (float)1e-6;	// some epsilon for robustness in intersection tests
+			rays[i][j].Origin = centroids[i] + rays[i][j].Direction * (float)1e-3;	// some epsilon for robustness in intersection tests
 		}
 	}
 	vector<vector<float>> rayDistances(rays.size());
@@ -371,6 +371,7 @@ int main(int, char ** argv)
 	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Dijkstra: " << duration << " seconds" << endl;
 #pragma endregion 
+	/*
 	std::vector<int> boundaryIndices;
 	const int numEdges = mesh->edges.size();
 	const int numTris = mesh->tris.size();
@@ -1230,7 +1231,7 @@ int main(int, char ** argv)
 		fprintf(pFile, "\n");
 	}
 	fclose(pFile);
-
+	*/
 	//int p1 = 0, p2 = 200;
 	int p1 = -1, p2 = -1;
 	while (p1 < 0 || p1 >= numVertices) {
@@ -1247,6 +1248,7 @@ int main(int, char ** argv)
 			cout << "Invalid index, try again: ";
 		}
 	}
+	
 	std::vector<int> shortestPathVertices;
 	shortestPathVertices.push_back(p2);	// add dest node
 	int p2Parent = parents[p1][p2];
@@ -1260,6 +1262,7 @@ int main(int, char ** argv)
 		cout << spv << " ";
 	}
 	cout << endl;
+	
 #pragma region fps
 	cout << "------------------" << endl << "FPS" << endl << "------------------" << endl;
 	t0 = chrono::high_resolution_clock::now();
@@ -1417,10 +1420,11 @@ int main(int, char ** argv)
 			}
 		}
 	}
-	*/
+	
 	
 	//root->addChild( painter->getShapeSep(mesh) );
-	int visualization = 4;
+	root->addChild(painter->getSdfShapeSep(mesh, nsdf));
+	int visualization = 1;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
 		cin >> visualization;
@@ -1429,7 +1433,7 @@ int main(int, char ** argv)
 		}
 	}
 	if(visualization == 1){
-		//root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
+		root->addChild(painter->getShortestPathSep(mesh, shortestPathVertices));	// visualization for shortest path vertices
 	}
 	else if(visualization == 2){
 		//root->addChild(painter->getGeodesicIsoCurveSep(mesh, isoCurveLines, histogramBins, seedIndex));
@@ -1439,9 +1443,9 @@ int main(int, char ** argv)
 	}
 	else if(visualization == 4)
 	{
-		mesh->samples = boundaryIndices;
+		//mesh->samples = boundaryIndices;
 		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
-		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
+		//root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
 	

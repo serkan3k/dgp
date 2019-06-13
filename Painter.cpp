@@ -1,5 +1,6 @@
 #define HAVE_SINGLEPRECISION_MATH
 #include "Painter.h"
+#include <random>
 
 SoSeparator* Painter::getShapeSep(Mesh* mesh)
 {
@@ -58,6 +59,104 @@ SoSeparator* Painter::getShapeSep(Mesh* mesh)
 
 	return res;
 }
+
+SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSdf)
+{
+	SoSeparator* res = new SoSeparator();
+
+	//transformation
+	//not needed
+
+	//color
+	SoMaterial* mat = new SoMaterial();
+	mat->diffuseColor.setValue(1, 1, 1); //paint all vertices with this color
+	//mat->transparency = 0.5f : 0.0f; //0 makes it completely opaque, the default
+
+
+	std::mt19937 generator;
+	std::uniform_real_distribution<float> distribution;
+
+	float minSdf = FLT_MAX;
+	float maxSdf = FLT_MIN;
+	for(int i = 0; i < normalizedSdf.size(); ++i)
+	{
+		if(normalizedSdf[i] < minSdf)
+		{
+			minSdf = normalizedSdf[i];
+		}
+		if(normalizedSdf[i] > maxSdf)
+		{
+			maxSdf = normalizedSdf[i];
+		}
+	}
+	std::cout << "NSDF Min: " << minSdf << " , NSDF Max: " << maxSdf << std::endl;
+	bool youWantToPaintEachFaceDifferently = true;
+	if (youWantToPaintEachFaceDifferently) {
+		for (int i = 0; i < (int)mesh->tris.size(); i++) //i = 0 obj->color above overwritten here
+		{
+			//			SbColor col(1.0f, 0.0f, 0.0f);
+			float r = 0, g = 0, b = 0;
+			if (normalizedSdf[i] <= 0.25f) {
+				r = normalizedSdf[i] / (0.25f);
+			}
+			else if (normalizedSdf[i] > 0.25f && normalizedSdf[i] <= 0.5f) {
+				r = 1.0f - ((normalizedSdf[i] - 0.25f) / 0.25f);
+				g = 1.0f;
+			}
+			else if (normalizedSdf[i] > 0.5f && normalizedSdf[i] <= 0.75f) {
+				g = 1.0f;
+				b = (normalizedSdf[i] - 0.5f) / (0.25);
+			}
+			else {
+				b = 1.0f;
+				g = 1.0f - ((normalizedSdf[i] - 0.75f) / (0.25f));
+			}
+			SbColor col(r, g, b);
+			mat->diffuseColor.set1Value(i, col);// mesh->verts[i]->color); //vert color according to its x-y-z coord (for mesh1) and to the transferred color (for mesh2)
+		}
+	}
+	res->addChild(mat);
+
+	SoShapeHints* hints = new SoShapeHints;
+	hints->creaseAngle = 3.14;
+	res->addChild(hints); //Gouraud shading
+
+	if (youWantToPaintEachFaceDifferently)
+	{
+		SoMaterialBinding* materialBinding = new SoMaterialBinding; //for 2+ diffuse color usage on the same mesh
+		//materialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED;
+		materialBinding->value = SoMaterialBinding::PER_FACE_INDEXED;
+		res->addChild(materialBinding);
+	}
+
+	//shape
+	SoCoordinate3* coords = new SoCoordinate3();
+	for (int c = 0; c < mesh->verts.size(); c++)
+		coords->point.set1Value(c, mesh->verts[c]->coords[0], mesh->verts[c]->coords[1], mesh->verts[c]->coords[2]);
+	SoIndexedFaceSet* faceSet = new SoIndexedFaceSet();
+	for (int c = 0; c < mesh->tris.size(); c++)
+	{
+		faceSet->coordIndex.set1Value(c * 4, mesh->tris[c]->v1i);
+		faceSet->coordIndex.set1Value(c * 4 + 1, mesh->tris[c]->v2i);
+		faceSet->coordIndex.set1Value(c * 4 + 2, mesh->tris[c]->v3i);
+		faceSet->coordIndex.set1Value(c * 4 + 3, -1);
+
+		if (youWantToPaintEachFaceDifferently)
+		{
+			int t = c;
+			faceSet->materialIndex.set1Value(c, c);
+			//int nt = mesh->tris.size();
+			//faceSet->materialIndex.set1Value(0 + 4 * nt, mesh->tris[c]->v1i);
+			//faceSet->materialIndex.set1Value(1 + 4 * nt, mesh->tris[c]->v2i);
+			//faceSet->materialIndex.set1Value(2 + 4 * nt, mesh->tris[c]->v3i);
+		}
+	}
+	res->addChild(coords);
+	res->addChild(faceSet);
+
+	return res;
+}
+
 
 SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, float scale)
 {
