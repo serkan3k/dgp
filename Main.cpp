@@ -79,8 +79,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("face-low.off") + 1); 
-	strcpy(x, "face-low.off");
+	char* x = (char*)malloc(strlen("0.off") + 1); 
+	strcpy(x, "0.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -124,9 +124,9 @@ int main(int, char ** argv)
 				float z = distribution(generator) * 2.0f - 1.0f;	// z uniformly distributed btw [-1, 1]
 				float t = distribution(generator) * 2.0f * glm::pi<float>();	// t uniformly distributed btw [0, 2pi)
 				float r = sqrt(1.0f - z * z);
-				float x = r * cos(t);
+				float xx = r * cos(t);
 				float y = r * sin(t);
-				glm::vec3 sampledVec(x, y, z);
+				glm::vec3 sampledVec(xx, y, z);
 				float dotProduct = glm::dot(glm::normalize(negatedNormals[i]), glm::normalize(sampledVec));
 				float angleBetween = glm::acos(dotProduct);	// vector lengths are 1 since they are normals & normalized
 				if(glm::degrees(angleBetween) <= 60.0f)	//accept the sample
@@ -135,18 +135,18 @@ int main(int, char ** argv)
 					accepted = true;
 				}
 			}
-			rays[i][j].Origin = centroids[i] + rays[i][j].Direction * (float)1e-6;	// some epsilon for robustness in intersection tests
+			rays[i][j].Origin = centroids[i]; //+ rays[i][j].Direction * (float)1e-6;	// some epsilon for robustness in intersection tests
 		}
 	}
-
-	for(unsigned i = 0; i < rays[i].size(); ++i)
+	vector<vector<float>> rayDistances(rays.size());
+	for(unsigned i = 0; i < rays.size(); ++i)
 	{
 		// initialize bins & weighted average stuff
 		for(unsigned j = 0; j < rays[i].size(); ++j)
 		{
 			bool isHit = false;
-			float tmin = FLT_MAX;
-			for(unsigned k = 0; k < mesh->tris.size() && k != i; ++k)
+			double tmin = DBL_MAX;
+			for(unsigned k = 0; k < mesh->tris.size(); ++k)
 			{
 				const glm::vec3 v1(mesh->verts[mesh->tris[k]->v1i]->coords[0],
 					mesh->verts[mesh->tris[k]->v1i]->coords[1],
@@ -163,12 +163,12 @@ int main(int, char ** argv)
 				const double d = glm::dot(v1v2, p);
 				if(abs(d) < 0){ continue; }
 				const glm::vec3 t = rays[i][j].Origin - v1;
-				const double u = glm::dot(t, p) * (1.0f / d);
+				const double u = glm::dot(t, p) * (1.0 / d);
 				if(u < 0.0f && u > 1.0f){continue;}
 				const glm::vec3 q = glm::cross(t, v1v2);
 				const double v = glm::dot(rays[i][j].Direction, q) * (1.0f / d);
 				if (v < 0.0f && v > 1.0f) { continue; }
-				float dist = glm::dot(v1v3, q) * (1.0f / d);
+				double dist = glm::dot(v1v3, q) * (1.0 / d);
 				if (dist < 0) { continue; }
 				if(dist <= tmin)
 				{
@@ -182,10 +182,69 @@ int main(int, char ** argv)
 					}
 				}		
 			}
-			
+			if(isHit)
+			{
+				rayDistances[i].push_back(tmin);
+			}
 		}
 	}
-	
+	vector<float> sdf;
+	for(unsigned i = 0; i < rayDistances.size(); ++i)
+	{
+		if(rayDistances[i].empty())
+		{
+			sdf.push_back(0.0f);
+			continue;
+		}
+		else if(rayDistances[i].size() == 1)
+		{
+			sdf.push_back(rayDistances[i][0]);
+			continue;
+		}
+		std::sort(rayDistances[i].begin(), rayDistances[i].end());
+		float mean = 0;
+		float variance = 0;
+		for(unsigned j = 0; j < rayDistances[i].size(); ++j)
+		{
+			mean += rayDistances[i][j] / (float)rayDistances[i].size();
+		}
+		for(unsigned j = 0; j < rayDistances[i].size(); ++j)
+		{
+			variance += (rayDistances[i][j] - mean) * (rayDistances[i][j] - mean);
+		}
+		variance /= (float)rayDistances[i].size();
+		float stdDev = glm::sqrt(variance);
+		float rightMax = rayDistances[i][rayDistances[i].size() / 2] + stdDev; // 1 std dev away from median
+		float leftMax = std::max(0.0f, rayDistances[i][rayDistances[i].size() / 2] - stdDev);
+		float sum = 0.0f;
+		float numElementsInSum = 0.0f;
+		for(unsigned j = 0; j < rayDistances[i].size(); ++j)
+		{
+			if(rayDistances[i][j] <= rightMax && rayDistances[i][j] >= leftMax)
+			{
+				numElementsInSum += 1.0f;
+				sum += rayDistances[i][j];
+			}
+		}
+		sdf.push_back(sum / numElementsInSum);
+	}
+	float minSdf = FLT_MAX;
+	float maxSdf = FLT_MIN;
+	for(unsigned i = 0; i < sdf.size(); ++i){
+		if(sdf[i] <= minSdf){
+			minSdf = sdf[i];
+		}
+		if (sdf[i] >= maxSdf) {
+			maxSdf = sdf[i];
+		}
+	}
+	vector<float> nsdf;
+	const float sdfAlpha = 4.0f;
+	for(unsigned i = 0; i < sdf.size(); ++i)
+	{
+		float normalized = glm::log(((sdf[i] - minSdf) / (maxSdf - minSdf)) * sdfAlpha + 1.0f) / glm::log(sdfAlpha + 1.0f);
+		nsdf.push_back(normalized);
+	}
 
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
