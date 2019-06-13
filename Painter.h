@@ -20,6 +20,7 @@
 //#include <Inventor/nodes/SoCone.h>
 
 #include "Mesh.h"
+#include "glm/vec3.hpp"
 using namespace Eigen;
 
 class Painter
@@ -27,6 +28,7 @@ class Painter
 public:
 	SoSeparator* getShapeSep(Mesh* mesh);
 	SoSeparator* getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSdf);
+	SoSeparator* getRayCastRaysShapeSep(Mesh* mesh, std::vector<glm::vec3> rayOrigins, std::vector<glm::vec3> rayDirections);
 	SoSeparator * getSpheresSep(Mesh * mesh, float deltaX, float deltaY, float scale);
 	SoSeparator * getShortestPathSep(Mesh * mesh, const vector<int> &shortestPathVertices);
 	SoSeparator * getGeodesicIsoCurveSep(Mesh * mesh, const std::vector<std::vector<pair<std::vector<float>, std::vector<float>>>> &isoCurves, const std::vector<float> &histogramBins, const int seedVertex);

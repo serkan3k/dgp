@@ -13,7 +13,7 @@ SoSeparator* Painter::getShapeSep(Mesh* mesh)
 	SoMaterial* mat = new SoMaterial();
 	mat->diffuseColor.setValue(1, 1, 1); //paint all vertices with this color
 	//mat->transparency = 0.5f : 0.0f; //0 makes it completely opaque, the default
-
+	
 	bool youWantToPaintEachVertexDifferently = false;
 	if (youWantToPaintEachVertexDifferently)
 		for (int i = 0; i < (int) mesh->verts.size(); i++) //i = 0 obj->color above overwritten here
@@ -89,13 +89,48 @@ SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSd
 			maxSdf = normalizedSdf[i];
 		}
 	}
+
 	std::cout << "NSDF Min: " << minSdf << " , NSDF Max: " << maxSdf << std::endl;
 	bool youWantToPaintEachFaceDifferently = true;
 	if (youWantToPaintEachFaceDifferently) {
 		for (int i = 0; i < (int)mesh->tris.size(); i++) //i = 0 obj->color above overwritten here
+		//for(int i = 0; i < (int)mesh->verts.size(); ++i)
 		{
+			//float val = normalizedSdf[i];
+			//for(unsigned k = 0; k < mesh->verts[i]->triList.size(); ++k)
+			//{
+			//	val += normalizedSdf[k];
+			//}
+			//if (mesh->verts[i]->triList.empty() == false) {
+			//	val /= (float)mesh->verts[i]->triList.size();
+			//}
 			//			SbColor col(1.0f, 0.0f, 0.0f);
 			float r = 0, g = 0, b = 0;
+			/*r = 1.0f - val;
+			b = val;
+			if(val <= 0.5f)
+			{
+				g = val * 2 - 0.5f;
+			}
+			if(val > 0.5f)
+			{
+				g = (1 - val) * 2;
+			}*/
+			/*if (val <= 0.25f) {
+				r = val / (0.25f);
+			}
+			else if (val > 0.25f && val <= 0.5f) {
+				r = 1.0f - ((val - 0.25f) / 0.25f);
+				g = 1.0f;
+			}
+			else if (val > 0.5f && val <= 0.75f) {
+				g = 1.0f;
+				b = (val - 0.5f) / (0.25);
+			}
+			else {
+				b = 1.0f;
+				g = 1.0f - ((val - 0.75f) / (0.25f));
+			}*/
 			if (normalizedSdf[i] <= 0.25f) {
 				r = normalizedSdf[i] / (0.25f);
 			}
@@ -112,7 +147,9 @@ SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSd
 				g = 1.0f - ((normalizedSdf[i] - 0.75f) / (0.25f));
 			}
 			SbColor col(r, g, b);
-			mat->diffuseColor.set1Value(i, col);// mesh->verts[i]->color); //vert color according to its x-y-z coord (for mesh1) and to the transferred color (for mesh2)
+			//SbColor col(1.0f, 0.0f, 0.0f);
+			//mat->diffuseColor.set1Value(i, col);// mesh->verts[i]->color); //vert color according to its x-y-z coord (for mesh1) and to the transferred color (for mesh2)
+			mat->diffuseColor.set1Value(i, col);
 		}
 	}
 	res->addChild(mat);
@@ -145,10 +182,10 @@ SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSd
 		{
 			int t = c;
 			faceSet->materialIndex.set1Value(c, c);
-			//int nt = mesh->tris.size();
-			//faceSet->materialIndex.set1Value(0 + 4 * nt, mesh->tris[c]->v1i);
-			//faceSet->materialIndex.set1Value(1 + 4 * nt, mesh->tris[c]->v2i);
-			//faceSet->materialIndex.set1Value(2 + 4 * nt, mesh->tris[c]->v3i);
+			/*int nt = mesh->tris.size();
+			faceSet->materialIndex.set1Value(0 + 4 * nt, mesh->tris[c]->v1i);
+			faceSet->materialIndex.set1Value(1 + 4 * nt, mesh->tris[c]->v2i);
+			faceSet->materialIndex.set1Value(2 + 4 * nt, mesh->tris[c]->v3i);*/
 		}
 	}
 	res->addChild(coords);
@@ -156,6 +193,81 @@ SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSd
 
 	return res;
 }
+
+SoSeparator* Painter::getRayCastRaysShapeSep(Mesh* mesh, std::vector<glm::vec3> rayOrigins,
+	std::vector<glm::vec3> rayDirections)
+{
+	SoSeparator* res = new SoSeparator();
+	//color
+	SoMaterial* mat = new SoMaterial();
+	mat->diffuseColor.setValue(1, 1, 1);
+	mat->transparency = 0.125f;
+	res->addChild(mat);
+	SoShapeHints* hints = new SoShapeHints;
+	hints->creaseAngle = 3.14;
+	res->addChild(hints); //Gouraud shading
+	SoCoordinate3* coords = new SoCoordinate3();
+	for (int c = 0; c < mesh->verts.size(); c++)
+		coords->point.set1Value(c, mesh->verts[c]->coords[0], mesh->verts[c]->coords[1], mesh->verts[c]->coords[2]);
+	SoIndexedFaceSet* faceSet = new SoIndexedFaceSet();
+	for (int c = 0; c < mesh->tris.size(); c++)
+	{
+		faceSet->coordIndex.set1Value(c * 4, mesh->tris[c]->v1i);
+		faceSet->coordIndex.set1Value(c * 4 + 1, mesh->tris[c]->v2i);
+		faceSet->coordIndex.set1Value(c * 4 + 2, mesh->tris[c]->v3i);
+		faceSet->coordIndex.set1Value(c * 4 + 3, -1);
+	}
+	res->addChild(coords);
+	res->addChild(faceSet);
+
+	for(int i = 0; i < rayOrigins.size(); ++i)
+	{
+		SoSeparator* sphere1SepStart = new SoSeparator;
+		SoTransform *sphereTransform = new SoTransform;
+		sphereTransform->translation.setValue(rayOrigins[i].x, rayOrigins[i].y, rayOrigins[i].z);
+			//mesh->verts[shortestPathVertices[0]]->coords[0],
+			//mesh->verts[shortestPathVertices[0]]->coords[1],
+			//mesh->verts[shortestPathVertices[0]]->coords[2]);
+		sphereTransform->scaleFactor.setValue(1, 1, 1);
+		sphere1SepStart->addChild(sphereTransform);
+		auto sphereMaterial = new SoMaterial;
+		sphereMaterial->diffuseColor.setValue(0.0f, 1.0f, 0.0f);
+		sphere1SepStart->addChild(sphereMaterial);
+		SoSphere* sph1 = new SoSphere();
+		sph1->radius = 0.5f;
+		sphere1SepStart->addChild(sph1);
+
+		res->addChild(sphere1SepStart);
+	}
+
+	SoMaterial* ma = new SoMaterial;
+	ma->diffuseColor.set1Value(0, 1.0f, 0.0f, 0.0f);
+	res->addChild(ma);
+	SoDrawStyle* sty = new SoDrawStyle;	sty->lineWidth = 0.5f;
+	res->addChild(sty);
+	SoIndexedLineSet* ils = new SoIndexedLineSet;
+	SoCoordinate3* co = new SoCoordinate3;
+	for(int i = 0; i < rayDirections.size(); ++i)
+	{
+		//SoSeparator* thickEdgeSep = new SoSeparator;
+		//material
+		float* x = new float[3];
+		x[0] = rayOrigins[i].x; x[1] = rayOrigins[i].y; x[2] = rayOrigins[i].z;
+		float* y = new float[3];
+		y[0] = rayOrigins[i].x + rayDirections[i].x * 3.14f; y[1] = rayOrigins[i].y + rayDirections[i].y* 3.14f; y[2] = rayOrigins[i].z + rayDirections[i].z* 3.14f;
+		SbVec3f end1 = x;
+		SbVec3f end2 = y;
+		co->point.set1Value(2 * i, end1);
+		co->point.set1Value(2 * i + 1, end2);
+		ils->coordIndex.set1Value(3 * i, 2 * i);
+		ils->coordIndex.set1Value(3 * i + 1, 2 * i + 1);
+		ils->coordIndex.set1Value(3 * i + 2, -1);	
+	}
+	res->addChild(co);	res->addChild(ils);
+
+	return res;
+}
+
 
 
 SoSeparator* Painter::getSpheresSep(Mesh* mesh, float deltaX, float deltaY, float scale)
