@@ -9,7 +9,8 @@
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Eigen/Dense>
-
+#include "glm/glm.hpp"
+#include "glm/ext/scalar_constants.inl"
 
 #include "Mesh.h"
 #include "Painter.h"
@@ -23,9 +24,51 @@
 #include <stack>
 #include <set>
 #include <algorithm>
+#include <random>
 
 //using Eigen::MatrixXd;
 using namespace Eigen;
+
+class Ray
+{
+public:
+	Ray();
+	Ray(glm::vec3 origin, glm::vec3 direction) : Origin(origin), Direction(direction){}
+	~Ray();
+	glm::vec3 Origin,
+			Direction;
+};
+
+Ray::Ray()
+{
+}
+
+Ray::~Ray()
+{
+}
+
+class BBox
+{
+public:
+	glm::vec3 Min, Max, Center;
+	BBox();
+	~BBox();
+	bool Intersect(const Ray& ray) const;
+};
+
+bool BBox::Intersect(const Ray& ray) const
+{
+	const glm::vec3 inverseDir = 1.0f / ray.Direction;
+	const glm::vec3 invMin = (Min - ray.Origin) * inverseDir;
+	const glm::vec3 invMax = (Max - ray.Origin) * inverseDir;
+	const glm::vec3 t0 = glm::min(invMin, invMax);
+	const glm::vec3 t1 = glm::max(invMin, invMax);
+	float tmin = t0.x;
+	float tmax = t1.x;
+	tmin = std::max(tmin, std::max(t0.y, t0.z));
+	tmax = std::min(tmax, std::min(t1.y, t1.z));
+	return tmin <= tmax;
+}
 
 int main(int, char ** argv)
 {
@@ -37,12 +80,209 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("face-low.off") + 1); 
-	strcpy(x, "face-low.off");
+	char* x = (char*)malloc(strlen("0.off") + 1); 
+	strcpy(x, "0.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
-	
+
+	/*vector<glm::vec3> normals(mesh->verts.size());
+	vector<glm::vec3> centroids(mesh->verts.size());
+	vector<glm::vec3> negatedNormals(mesh->verts.size());
+	vector<vector<Ray>> rays(mesh->verts.size());
+*/
+	vector<glm::vec3> normals(mesh->tris.size());
+	vector<glm::vec3> centroids(mesh->tris.size());
+	vector<glm::vec3> directions(mesh->tris.size());
+	vector<glm::vec3> negatedNormals(mesh->tris.size());
+	vector<vector<Ray>> rays(mesh->tris.size());
+
+	std::mt19937 generator;
+	std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+	//for(unsigned i = 0; i < mesh->tris.size(); ++i)
+	for(unsigned i = 0; i < mesh->tris.size(); ++i)
+	{
+		//vector<glm::vec3> neighbourNormals;
+		//glm::vec3 normal(0, 0, 0);
+		//for (unsigned j = 0; j < mesh->verts[i]->triList.size(); ++j)
+		//{
+		//	auto v1Coords = mesh->verts[mesh->tris[j]->v1i]->coords;
+		//	auto v1x = v1Coords[0], v1y = v1Coords[1], v1z = v1Coords[2];
+		//	auto v2Coords = mesh->verts[mesh->tris[j]->v2i]->coords;
+		//	auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
+		//	auto v3Coords = mesh->verts[mesh->tris[j]->v3i]->coords;
+		//	auto v3x = v3Coords[0], v3y = v3Coords[1], v3z = v3Coords[2];
+		//	glm::vec3 center((v1x + v2x + v3x) / 3,
+		//		(v1y + v2y + v3y) / 3,
+		//		(v1z + v2z + v3z) / 3);
+		//	auto ux = v2x - v1x, uy = v2y - v1y, uz = v2z - v1z;
+		//	auto vx = v3x - v1x, vy = v3y - v1y, vz = v3z - v1z;
+		//	auto nx = uy * vz - uz * vy;
+		//	auto ny = uz * vx - ux * vz;
+		//	auto nz = ux * vy - uy * vx;
+		//	//glm::vec3 normalTemp(nx, ny, nz);
+		//	normal.x += nx / (float)mesh->verts[i]->triList.size(); 
+		//	normal.y += ny /(float)mesh->verts[i]->triList.size(); 
+		//	normal.z += nz / (float)mesh->verts[i]->triList.size();
+		//	//neighbourNormals.push_back(glm::normalize(normalTemp));
+		//}
+		//
+		auto v1Coords = mesh->verts[mesh->tris[i]->v1i]->coords;
+		auto v1x = v1Coords[0], v1y = v1Coords[1], v1z = v1Coords[2];
+		auto v2Coords = mesh->verts[mesh->tris[i]->v2i]->coords;
+		auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
+		auto v3Coords = mesh->verts[mesh->tris[i]->v3i]->coords;
+		auto v3x = v3Coords[0], v3y = v3Coords[1], v3z = v3Coords[2];
+		
+		auto ux = v2x - v1x, uy = v2y - v1y, uz = v2z - v1z;
+		auto vx = v3x - v1x, vy = v3y - v1y, vz = v3z - v1z;
+		auto nx = uy * vz - uz * vy; 
+		auto ny = uz * vx - ux * vz;
+		auto nz = ux * vy - uy * vx;
+		glm::vec3 normal(nx, ny, nz);
+		glm::vec3 center((v1x + v2x + v3x) / 3,
+			(v1y + v2y + v3y) / 3,
+			(v1z + v2z + v3z) / 3);
+		centroids[i] = center;
+		//glm::vec3 vx(mesh->verts[i]->coords[0], mesh->verts[i]->coords[1], mesh->verts[i]->coords[2]);
+		//centroids[i] = vx;
+		//normalize
+		normals[i] = glm::normalize(normal);
+		negatedNormals[i] = -normals[i];
+		rays[i].resize(30);
+		for(unsigned j = 0; j < rays[i].size(); ++j)
+		{
+			// rejection sampling, over the unit sphere, reject the ones that are not in cone
+			bool accepted = false;
+			while(!accepted)
+			{
+				// take samples over the unit sphere
+				float z = distribution(generator) * 2.0f - 1.0f;	// z uniformly distributed btw [-1, 1]
+				float t = distribution(generator) * 2.0f * glm::pi<float>();	// t uniformly distributed btw [0, 2pi)
+				float r = sqrt(1.0f - z * z);
+				float xx = r * cos(t);
+				float y = r * sin(t);
+				glm::vec3 sampledVec(xx, y, z);
+				float dotProduct = glm::dot(glm::normalize(negatedNormals[i]), glm::normalize(sampledVec));
+				float angleBetween = glm::acos(dotProduct);	// vector lengths are 1 since they are normals & normalized
+				if(glm::degrees(angleBetween) <= 60.0f)	//accept the sample
+				{
+					rays[i][j].Direction = glm::normalize(sampledVec);
+					accepted = true;
+				}
+			}
+			rays[i][j].Origin = centroids[i];// +rays[i][j].Direction * 1.0f;// (float)1e-1;	// some epsilon for robustness in intersection tests
+		}
+		directions[i] = rays[i][0].Direction;
+		centroids[i] = rays[i][0].Origin;
+	}
+	vector<vector<float>> rayDistances(rays.size());
+	//#pragma omp parallel for
+	for(int i = 0; i < rays.size(); ++i)
+	{
+		for(unsigned j = 0; j < rays[i].size(); ++j)
+		{
+			bool isHit = false;
+			double tmin = DBL_MAX;
+			for(unsigned k = 0; k < mesh->tris.size(); ++k)
+			{
+				const glm::vec3 v1(mesh->verts[mesh->tris[k]->v1i]->coords[0],
+					mesh->verts[mesh->tris[k]->v1i]->coords[1],
+					mesh->verts[mesh->tris[k]->v1i]->coords[2]);
+				const glm::vec3 v2(mesh->verts[mesh->tris[k]->v2i]->coords[0],
+					mesh->verts[mesh->tris[k]->v2i]->coords[1],
+					mesh->verts[mesh->tris[k]->v2i]->coords[2]);
+				const glm::vec3 v3(mesh->verts[mesh->tris[k]->v3i]->coords[0],
+					mesh->verts[mesh->tris[k]->v3i]->coords[1],
+					mesh->verts[mesh->tris[k]->v3i]->coords[2]);
+				const glm::vec3 v1v2 = v2 - v1;
+				const glm::vec3 v1v3 = v3 - v1;
+				const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
+				const double d = glm::dot(v1v2, p);
+				if(abs(d) < 0){ continue; }
+				const glm::vec3 t = rays[i][j].Origin - v1;
+				const double u = glm::dot(t, p) * (1.0 / d);
+				if(u < 0.0f || u > 1.0f){continue;}
+				const glm::vec3 q = glm::cross(t, v1v2);
+				const double v = glm::dot(rays[i][j].Direction, q) * (1.0f / d);
+				if (v < 0.0f || u + v > 1.0f) { continue; }
+				double dist = glm::dot(v1v3, q) * (1.0 / d);
+				if (dist < 0) { continue; }
+				if(dist <= tmin)
+				{
+					glm::vec3 normalAtIntersection = -glm::normalize(glm::cross(v1v2, v1v3));	//inwards facing normal
+					float dotBetween = glm::dot(rays[i][j].Direction, normalAtIntersection);
+					if(glm::degrees(glm::acos(dotBetween)) >= 90.0f)	// termination condition for same direction facing normals
+					{
+						// add termination condition for rays (from paper)	
+						isHit = true;
+						tmin = dist;
+					}
+				}		
+			}
+			if(isHit)
+			{
+				rayDistances[i].push_back(tmin);
+			}
+		}
+	}
+	vector<float> sdf;
+	for(unsigned i = 0; i < rayDistances.size(); ++i)
+	{
+		if(rayDistances[i].empty())
+		{
+			sdf.push_back(0.0f);
+			continue;
+		}
+		else if(rayDistances[i].size() == 1)
+		{
+			sdf.push_back(rayDistances[i][0]);
+			continue;
+		}
+		std::sort(rayDistances[i].begin(), rayDistances[i].end());
+		float mean = 0;
+		float variance = 0;
+		for(unsigned j = 0; j < rayDistances[i].size(); ++j)
+		{
+			mean += rayDistances[i][j] / (float)rayDistances[i].size();
+		}
+		for(unsigned j = 0; j < rayDistances[i].size(); ++j)
+		{
+			variance += (rayDistances[i][j] - mean) * (rayDistances[i][j] - mean);
+		}
+		variance /= (float)rayDistances[i].size();
+		float stdDev = glm::sqrt(variance);
+		float rightMax = rayDistances[i][rayDistances[i].size() / 2] + stdDev; // 1 std dev away from median
+		float leftMax = std::max(0.0f, rayDistances[i][rayDistances[i].size() / 2] - stdDev);
+		float sum = 0.0f;
+		float numElementsInSum = 0.0f;
+		for(unsigned j = 0; j < rayDistances[i].size(); ++j)
+		{
+			if(rayDistances[i][j] <= rightMax && rayDistances[i][j] >= leftMax)
+			{
+				numElementsInSum += 1.0f;
+				sum += rayDistances[i][j];
+			}
+		}
+		sdf.push_back(sum / numElementsInSum);
+	}
+	float minSdf = FLT_MAX;
+	float maxSdf = FLT_MIN;
+	for(unsigned i = 0; i < sdf.size(); ++i){
+		if(sdf[i] <= minSdf){
+			minSdf = sdf[i];
+		}
+		if (sdf[i] >= maxSdf) {
+			maxSdf = sdf[i];
+		}
+	}
+	vector<float> nsdf;
+	const float sdfAlpha = 4.0f;
+	for(unsigned i = 0; i < sdf.size(); ++i)
+	{
+		float normalized = glm::log(((sdf[i] - minSdf) / (maxSdf - minSdf)) * sdfAlpha + 1.0f) / glm::log(sdfAlpha + 1.0f);
+		nsdf.push_back(normalized);
+	}
 
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
@@ -127,6 +367,7 @@ int main(int, char ** argv)
 #pragma endregion 
 	
 #pragma region minHeap
+	/*
 	std::vector<std::vector<float>> distances(numVertices);
 	std::vector<std::vector<int>> parents(numVertices);
 	chrono::high_resolution_clock::time_point t0 = chrono::high_resolution_clock::now();
@@ -168,7 +409,9 @@ int main(int, char ** argv)
 	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 	auto duration = chrono::duration_cast<chrono::duration<float>>(t1 - t0).count();
 	std::cout << "Dijkstra: " << duration << " seconds" << endl;
+	*/
 #pragma endregion 
+	/*
 	std::vector<int> boundaryIndices;
 	const int numEdges = mesh->edges.size();
 	const int numTris = mesh->tris.size();
@@ -1028,8 +1271,9 @@ int main(int, char ** argv)
 		fprintf(pFile, "\n");
 	}
 	fclose(pFile);
-
+	*/
 	//int p1 = 0, p2 = 200;
+	/*
 	int p1 = -1, p2 = -1;
 	while (p1 < 0 || p1 >= numVertices) {
 		cout << "Enter first vertex index for query, [0," << numVertices - 1 << "] :";
@@ -1045,6 +1289,7 @@ int main(int, char ** argv)
 			cout << "Invalid index, try again: ";
 		}
 	}
+	
 	std::vector<int> shortestPathVertices;
 	shortestPathVertices.push_back(p2);	// add dest node
 	int p2Parent = parents[p1][p2];
@@ -1058,6 +1303,7 @@ int main(int, char ** argv)
 		cout << spv << " ";
 	}
 	cout << endl;
+	
 #pragma region fps
 	cout << "------------------" << endl << "FPS" << endl << "------------------" << endl;
 	t0 = chrono::high_resolution_clock::now();
@@ -1218,7 +1464,9 @@ int main(int, char ** argv)
 	*/
 	
 	//root->addChild( painter->getShapeSep(mesh) );
-	int visualization = 4;
+	root->addChild(painter->getSdfShapeSep(mesh, nsdf));
+	//root->addChild(painter->getRayCastRaysShapeSep(mesh, centroids, directions));
+	int visualization = 1;
 	while (visualization <= 0 || visualization > 4) {
 		cout << endl << "Select the visualization: 1 -> Dijkstra, 2 -> Geodesic Isocurves, 3 -> Farthest Point Sampling, 4 -> Boundary Vertices :";
 		cin >> visualization;
@@ -1237,14 +1485,15 @@ int main(int, char ** argv)
 	}
 	else if(visualization == 4)
 	{
-		mesh->samples = boundaryIndices;
+		//mesh->samples = boundaryIndices;
 		//root->addChild(painter->getSpheresSep(mesh, 0, 0, 1.0f));
-		root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
+		//root->addChild(painter->getParametrizedMeshSep(mesh, xx, xy));
 
 	}
 	
 	
-	viewer->setSize(SbVec2s(800, 600));
+	//viewer->setSize(SbVec2s(800, 600));
+	viewer->setSize(SbVec2s(1280, 760));
 	viewer->setSceneGraph(root);
 	viewer->show();
 
