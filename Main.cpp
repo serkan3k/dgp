@@ -80,30 +80,55 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("0.off") + 1); 
-	strcpy(x, "0.off");
+	char* x = (char*)malloc(strlen("t0_start.off") + 1); 
+	strcpy(x, "t0_start.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
 
-	/*vector<glm::vec3> normals(mesh->verts.size());
+	vector<glm::vec3> normals(mesh->verts.size());
 	vector<glm::vec3> centroids(mesh->verts.size());
+	vector<glm::vec3> directions(mesh->verts.size());
 	vector<glm::vec3> negatedNormals(mesh->verts.size());
 	vector<vector<Ray>> rays(mesh->verts.size());
-*/
-	vector<glm::vec3> normals(mesh->tris.size());
-	vector<glm::vec3> centroids(mesh->tris.size());
-	vector<glm::vec3> directions(mesh->tris.size());
-	vector<glm::vec3> negatedNormals(mesh->tris.size());
-	vector<vector<Ray>> rays(mesh->tris.size());
+
+	//vector<glm::vec3> normals(mesh->tris.size());
+	//vector<glm::vec3> centroids(mesh->tris.size());
+	//vector<glm::vec3> directions(mesh->tris.size());
+	//vector<glm::vec3> negatedNormals(mesh->tris.size());
+	//vector<vector<Ray>> rays(mesh->tris.size());
+
+	for (unsigned i = 0; i < normals.size(); ++i) {
+		normals[i] = glm::vec3(0,0,0);
+	}
+
+	for (unsigned i = 0; i < mesh->tris.size(); ++i) 
+	{
+		int v1Index = (mesh->tris[i]->v1i);
+		int v2Index = (mesh->tris[i]->v2i);
+		int v3Index = (mesh->tris[i]->v3i);
+		glm::vec3 v1(mesh->verts[v1Index]->coords[0], mesh->verts[v1Index]->coords[1], mesh->verts[v1Index]->coords[2]);
+		glm::vec3 v2(mesh->verts[v2Index]->coords[0], mesh->verts[v2Index]->coords[1], mesh->verts[v2Index]->coords[2]);
+		glm::vec3 v3(mesh->verts[v3Index]->coords[0], mesh->verts[v3Index]->coords[1], mesh->verts[v3Index]->coords[2]);
+		glm::vec3 v1v2 = v2 - v1;
+		glm::vec3 v1v3 = v3 - v1;
+		glm::vec3 p = glm::cross(v1v2, v1v3);
+		normals[v1Index] += p;
+		normals[v2Index] += p;
+		normals[v3Index] += p;
+	}
+
+	for (unsigned i = 0; i < normals.size(); ++i) {
+		normals[i] = glm::normalize(normals[i]);
+	}
 
 	std::mt19937 generator;
 	std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
 	//for(unsigned i = 0; i < mesh->tris.size(); ++i)
-	for(unsigned i = 0; i < mesh->tris.size(); ++i)
+	for(unsigned i = 0; i < mesh->verts.size(); ++i)
 	{
 		//vector<glm::vec3> neighbourNormals;
-		//glm::vec3 normal(0, 0, 0);
+		glm::vec3 normal(0, 0, 0);
 		//for (unsigned j = 0; j < mesh->verts[i]->triList.size(); ++j)
 		//{
 		//	auto v1Coords = mesh->verts[mesh->tris[j]->v1i]->coords;
@@ -112,22 +137,27 @@ int main(int, char ** argv)
 		//	auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
 		//	auto v3Coords = mesh->verts[mesh->tris[j]->v3i]->coords;
 		//	auto v3x = v3Coords[0], v3y = v3Coords[1], v3z = v3Coords[2];
-		//	glm::vec3 center((v1x + v2x + v3x) / 3,
-		//		(v1y + v2y + v3y) / 3,
-		//		(v1z + v2z + v3z) / 3);
 		//	auto ux = v2x - v1x, uy = v2y - v1y, uz = v2z - v1z;
 		//	auto vx = v3x - v1x, vy = v3y - v1y, vz = v3z - v1z;
 		//	auto nx = uy * vz - uz * vy;
 		//	auto ny = uz * vx - ux * vz;
 		//	auto nz = ux * vy - uy * vx;
-		//	//glm::vec3 normalTemp(nx, ny, nz);
-		//	normal.x += nx / (float)mesh->verts[i]->triList.size(); 
-		//	normal.y += ny /(float)mesh->verts[i]->triList.size(); 
-		//	normal.z += nz / (float)mesh->verts[i]->triList.size();
+		//	glm::vec3 normalTemp(nx, ny, nz);
+
+		//	glm::vec3 v1(v1x, v1y, v1z);
+		//	glm::vec3 v2(v2x, v2y, v2z);
+		//	glm::vec3 v3(v3x, v3y, v3z);
+		//	glm::vec3 v1v2 = v2 - v1;
+		//	glm::vec3 v1v3 = v3 - v1;
+		//	normalTemp = glm::cross(v1v2, v1v3);
+		//	//normalTemp = glm::normalize(normalTemp);
+		//	normal.x += normalTemp.x; // (float)mesh->verts[i]->triList.size();
+		//	normal.y += normalTemp.y; // (float)mesh->verts[i]->triList.size();
+		//	normal.z += normalTemp.z; // (float)mesh->verts[i]->triList.size();
 		//	//neighbourNormals.push_back(glm::normalize(normalTemp));
 		//}
-		//
-		auto v1Coords = mesh->verts[mesh->tris[i]->v1i]->coords;
+		
+		/*auto v1Coords = mesh->verts[mesh->tris[i]->v1i]->coords;
 		auto v1x = v1Coords[0], v1y = v1Coords[1], v1z = v1Coords[2];
 		auto v2Coords = mesh->verts[mesh->tris[i]->v2i]->coords;
 		auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
@@ -139,15 +169,19 @@ int main(int, char ** argv)
 		auto nx = uy * vz - uz * vy; 
 		auto ny = uz * vx - ux * vz;
 		auto nz = ux * vy - uy * vx;
-		glm::vec3 normal(nx, ny, nz);
-		glm::vec3 center((v1x + v2x + v3x) / 3,
+		glm::vec3 normal(nx, ny, nz);*/
+		/*glm::vec3 center((v1x + v2x + v3x) / 3,
 			(v1y + v2y + v3y) / 3,
 			(v1z + v2z + v3z) / 3);
-		centroids[i] = center;
-		//glm::vec3 vx(mesh->verts[i]->coords[0], mesh->verts[i]->coords[1], mesh->verts[i]->coords[2]);
-		//centroids[i] = vx;
+		centroids[i] = center;*/
+		glm::vec3 vx(mesh->verts[i]->coords[0], mesh->verts[i]->coords[1], mesh->verts[i]->coords[2]);
+		centroids[i] = vx;
+		normal = glm::normalize(normal);
 		//normalize
-		normals[i] = glm::normalize(normal);
+		//if (normal != normals[i]) {
+		//	std::cout << "calculated normals differ at vertex" << i << " : " << normals[i].x << " " << normals[i].y << " " << normals[i].z << " , " << normal.x << " " << normal.y << " " << normal.z << std::endl;
+		//}
+		//normals[i] = glm::normalize(normal);
 		negatedNormals[i] = -normals[i];
 		rays[i].resize(30);
 		for(unsigned j = 0; j < rays[i].size(); ++j)
@@ -177,7 +211,7 @@ int main(int, char ** argv)
 		centroids[i] = rays[i][0].Origin;
 	}
 	vector<vector<float>> rayDistances(rays.size());
-	//#pragma omp parallel for
+	#pragma omp parallel for
 	for(int i = 0; i < rays.size(); ++i)
 	{
 		for(unsigned j = 0; j < rays[i].size(); ++j)

@@ -63,38 +63,12 @@ SoSeparator* Painter::getShapeSep(Mesh* mesh)
 SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSdf)
 {
 	SoSeparator* res = new SoSeparator();
-
-	//transformation
-	//not needed
-
-	//color
 	SoMaterial* mat = new SoMaterial();
-	mat->diffuseColor.setValue(1, 1, 1); //paint all vertices with this color
-	//mat->transparency = 0.5f : 0.0f; //0 makes it completely opaque, the default
-
-
-	std::mt19937 generator;
-	std::uniform_real_distribution<float> distribution;
-
-	float minSdf = FLT_MAX;
-	float maxSdf = FLT_MIN;
-	for(int i = 0; i < normalizedSdf.size(); ++i)
-	{
-		if(normalizedSdf[i] < minSdf)
-		{
-			minSdf = normalizedSdf[i];
-		}
-		if(normalizedSdf[i] > maxSdf)
-		{
-			maxSdf = normalizedSdf[i];
-		}
-	}
-
-	std::cout << "NSDF Min: " << minSdf << " , NSDF Max: " << maxSdf << std::endl;
+	mat->diffuseColor.setValue(0, 0, 0); //paint all vertices with this color
 	bool youWantToPaintEachFaceDifferently = true;
 	if (youWantToPaintEachFaceDifferently) {
-		for (int i = 0; i < (int)mesh->tris.size(); i++) //i = 0 obj->color above overwritten here
-		//for(int i = 0; i < (int)mesh->verts.size(); ++i)
+		//for (int i = 0; i < (int)mesh->tris.size(); i++) //i = 0 obj->color above overwritten here
+		for(int i = 0; i < (int)mesh->verts.size(); ++i)
 		{
 			//float val = normalizedSdf[i];
 			//for(unsigned k = 0; k < mesh->verts[i]->triList.size(); ++k)
@@ -161,8 +135,8 @@ SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSd
 	if (youWantToPaintEachFaceDifferently)
 	{
 		SoMaterialBinding* materialBinding = new SoMaterialBinding; //for 2+ diffuse color usage on the same mesh
-		//materialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED;
-		materialBinding->value = SoMaterialBinding::PER_FACE_INDEXED;
+		materialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED;
+		//materialBinding->value = SoMaterialBinding::PER_FACE_INDEXED;
 		res->addChild(materialBinding);
 	}
 
@@ -181,11 +155,11 @@ SoSeparator* Painter::getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSd
 		if (youWantToPaintEachFaceDifferently)
 		{
 			int t = c;
-			faceSet->materialIndex.set1Value(c, c);
-			/*int nt = mesh->tris.size();
+			//faceSet->materialIndex.set1Value(c, c);
+			int nt = mesh->tris.size();
 			faceSet->materialIndex.set1Value(0 + 4 * nt, mesh->tris[c]->v1i);
 			faceSet->materialIndex.set1Value(1 + 4 * nt, mesh->tris[c]->v2i);
-			faceSet->materialIndex.set1Value(2 + 4 * nt, mesh->tris[c]->v3i);*/
+			faceSet->materialIndex.set1Value(2 + 4 * nt, mesh->tris[c]->v3i);
 		}
 	}
 	res->addChild(coords);
