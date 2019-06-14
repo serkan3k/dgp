@@ -39,13 +39,9 @@ public:
 			Direction;
 };
 
-Ray::Ray()
-{
-}
+Ray::Ray(){}
 
-Ray::~Ray()
-{
-}
+Ray::~Ray(){}
 
 class BBox
 {
@@ -56,6 +52,8 @@ public:
 	bool Intersect(const Ray& ray) const;
 };
 
+BBox::BBox(){}
+BBox::~BBox(){}
 bool BBox::Intersect(const Ray& ray) const
 {
 	const glm::vec3 inverseDir = 1.0f / ray.Direction;
@@ -70,6 +68,107 @@ bool BBox::Intersect(const Ray& ray) const
 	return tmin <= tmax;
 }
 
+class Object
+{
+public:
+	Object();
+	~Object();
+	Triangle* Triangle;
+	BBox BoundingBox;
+};
+
+class BVH
+{
+public:
+	BVH();
+	BVH(std::vector<Object*>& triangles, int currentAxis);
+	~BVH();
+	bool Intersect(Ray& ray, double& tmin);
+	BBox CalculateBoundingBox();
+	BVH * LeftNode;
+	BVH * RightNode;
+	BBox BoundingBox;
+	Triangle * ShapeObject;
+	bool IsLeaf;
+};
+
+BVH::BVH()
+{
+	LeftNode = nullptr;
+	RightNode = nullptr;
+	ShapeObject = nullptr;
+	BoundingBox = BBox();
+}
+BVH::~BVH(){}
+
+bool compareBBoxX(Object* o1, Object* o2) {
+	return (o1->BoundingBox.Center.x < o2->BoundingBox.Center.x);
+}
+
+bool compareBBoxY(Object* o1, Object* o2) {
+	return (o1->BoundingBox.Center.y < o2->BoundingBox.Center.y);
+}
+
+bool compareBBoxZ(Object* o1, Object* o2) {
+	return (o1->BoundingBox.Center.z < o2->BoundingBox.Center.z);
+}
+
+BVH::BVH(std::vector<Object*>& triangles, int currentAxis)
+{
+	if(triangles.size() == 1)
+	{
+		ShapeObject = triangles[0]->Triangle;
+		BoundingBox = triangles[0]->BoundingBox;
+		IsLeaf = true;
+		return;
+	}
+	IsLeaf = false;
+	int axis = (currentAxis % 3);
+	auto trianglesSorted = triangles;
+	if(axis == 0){
+		std::sort(trianglesSorted.begin(), trianglesSorted.end(), compareBBoxX);
+	}
+	else if(axis == 1){
+		std::sort(trianglesSorted.begin(), trianglesSorted.end(), compareBBoxY);
+	}
+	else{
+		std::sort(trianglesSorted.begin(), trianglesSorted.end(), compareBBoxZ);
+	}
+	std::vector<Object*> leftObjects, rightObjects;
+	
+	for (auto it = trianglesSorted.begin(); it != trianglesSorted.begin() + trianglesSorted.size() / 2; ++it)
+	{
+		leftObjects.push_back(*it);	
+	}
+	for (auto it = trianglesSorted.begin() + trianglesSorted.size() / 2; it != trianglesSorted.end(); ++it) {
+		rightObjects.push_back(*it);
+	}
+	LeftNode = new BVH(leftObjects, axis + 1);
+	RightNode = new BVH(rightObjects, axis + 1);
+	BoundingBox.Min.x = std::min(LeftNode->BoundingBox.Min.x, RightNode->BoundingBox.Min.x);
+	BoundingBox.Min.y = std::min(LeftNode->BoundingBox.Min.y, RightNode->BoundingBox.Min.y);
+	BoundingBox.Min.z = std::min(LeftNode->BoundingBox.Min.z, RightNode->BoundingBox.Min.z);
+	BoundingBox.Max.x = std::max(LeftNode->BoundingBox.Max.x, RightNode->BoundingBox.Max.x);
+	BoundingBox.Max.y = std::max(LeftNode->BoundingBox.Max.y, RightNode->BoundingBox.Max.y);
+	BoundingBox.Max.z = std::max(LeftNode->BoundingBox.Max.z, RightNode->BoundingBox.Max.z);
+	BoundingBox.Center.x = (BoundingBox.Min.x + BoundingBox.Max.x) * 0.5f;
+	BoundingBox.Center.y = (BoundingBox.Min.y + BoundingBox.Max.y) * 0.5f;
+	BoundingBox.Center.z = (BoundingBox.Min.z + BoundingBox.Max.z) * 0.5f;
+	return;
+}
+
+bool BVH::Intersect(Ray &ray, double &tmin)
+{
+	return false;
+}
+
+BBox BVH::CalculateBoundingBox()
+{
+	return BBox();
+}
+
+
+
 int main(int, char ** argv)
 {
 
@@ -80,8 +179,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("t0_start.off") + 1); 
-	strcpy(x, "t0_start.off");
+	char* x = (char*)malloc(strlen("0.off") + 1); 
+	strcpy(x, "0.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -101,7 +200,7 @@ int main(int, char ** argv)
 	for (unsigned i = 0; i < normals.size(); ++i) {
 		normals[i] = glm::vec3(0,0,0);
 	}
-
+	std::vector<BBox> boundingBoxes(mesh->tris.size());
 	for (unsigned i = 0; i < mesh->tris.size(); ++i) 
 	{
 		int v1Index = (mesh->tris[i]->v1i);
@@ -116,6 +215,17 @@ int main(int, char ** argv)
 		normals[v1Index] += p;
 		normals[v2Index] += p;
 		normals[v3Index] += p;
+		BBox triangleBox; // bounding box for acceleration
+		triangleBox.Center = glm::vec3((v1.x + v2.x + v3.x) / 3.0,
+			(v1.y + v2.y + v3.y) / 3.0,
+			(v1.z + v2.z + v3.z) / 3.0f);
+		triangleBox.Min = glm::vec3(std::min(std::min(v1.x, v2.x), v3.x),
+			std::min(std::min(v1.y, v2.y), v3.y),
+			std::min(std::min(v1.z, v2.z), v3.z));
+		triangleBox.Max = glm::vec3(std::max(std::max(v1.x, v2.x), v3.x),
+			std::max(std::max(v1.y, v2.y), v3.y),
+			std::max(std::max(v1.z, v2.z), v3.z));
+		boundingBoxes[i] = triangleBox;
 	}
 
 	for (unsigned i = 0; i < normals.size(); ++i) {
