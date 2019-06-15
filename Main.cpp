@@ -43,6 +43,27 @@ Ray::Ray(){}
 
 Ray::~Ray(){}
 
+class RayHitInfo
+{
+public:
+	RayHitInfo();
+	~RayHitInfo();
+	Ray Ray;
+	glm::vec3 Normal,
+		Wo,
+		Wi,
+		Point;
+	float T, U, V;
+	bool IsHit;
+	int HitMaterialID;
+};
+
+RayHitInfo::RayHitInfo(){}
+
+
+RayHitInfo::~RayHitInfo(){}
+
+
 class BBox
 {
 public:
@@ -77,13 +98,17 @@ public:
 	BBox BoundingBox;
 };
 
+Object::Object() {};
+Object::~Object() {};
+
+
 class BVH
 {
 public:
 	BVH();
-	BVH(std::vector<Object*>& triangles, int currentAxis);
+	BVH(std::vector<Object*>& triangles, const Mesh* mesh, int currentAxis);
 	~BVH();
-	bool Intersect(Ray& ray, double& tmin);
+	bool Intersect(Ray& ray, const Mesh* mesh, double& tmin, RayHitInfo& rayHitInfo);
 	BBox CalculateBoundingBox();
 	BVH * LeftNode;
 	BVH * RightNode;
@@ -113,7 +138,7 @@ bool compareBBoxZ(Object* o1, Object* o2) {
 	return (o1->BoundingBox.Center.z < o2->BoundingBox.Center.z);
 }
 
-BVH::BVH(std::vector<Object*>& triangles, int currentAxis)
+BVH::BVH(std::vector<Object*>& triangles, const Mesh* mesh, int currentAxis)
 {
 	if(triangles.size() == 1)
 	{
@@ -143,8 +168,8 @@ BVH::BVH(std::vector<Object*>& triangles, int currentAxis)
 	for (auto it = trianglesSorted.begin() + trianglesSorted.size() / 2; it != trianglesSorted.end(); ++it) {
 		rightObjects.push_back(*it);
 	}
-	LeftNode = new BVH(leftObjects, axis + 1);
-	RightNode = new BVH(rightObjects, axis + 1);
+	LeftNode = new BVH(leftObjects, mesh, axis + 1);
+	RightNode = new BVH(rightObjects, mesh, axis + 1);
 	BoundingBox.Min.x = std::min(LeftNode->BoundingBox.Min.x, RightNode->BoundingBox.Min.x);
 	BoundingBox.Min.y = std::min(LeftNode->BoundingBox.Min.y, RightNode->BoundingBox.Min.y);
 	BoundingBox.Min.z = std::min(LeftNode->BoundingBox.Min.z, RightNode->BoundingBox.Min.z);
@@ -157,8 +182,66 @@ BVH::BVH(std::vector<Object*>& triangles, int currentAxis)
 	return;
 }
 
-bool BVH::Intersect(Ray &ray, double &tmin)
+bool BVH::Intersect(Ray &ray, const Mesh* mesh, double &tmin, RayHitInfo& rayHitInfo)
 {
+	if (BoundingBox.Intersect(ray))
+	{
+		if (IsLeaf)
+		{
+			const glm::vec3 v1(mesh->verts[ShapeObject->v1i]->coords[0],
+						mesh->verts[ShapeObject->v1i]->coords[1],
+						mesh->verts[ShapeObject->v1i]->coords[2]);
+			const glm::vec3 v2(mesh->verts[ShapeObject->v2i]->coords[0],
+				mesh->verts[ShapeObject->v2i]->coords[1],
+				mesh->verts[ShapeObject->v2i]->coords[2]);
+			const glm::vec3 v3(mesh->verts[ShapeObject->v3i]->coords[0],
+				mesh->verts[ShapeObject->v3i]->coords[1],
+				mesh->verts[ShapeObject->v3i]->coords[2]);
+			const glm::vec3 v1v2 = v2 - v1;
+			const glm::vec3 v1v3 = v3 - v1;
+			const glm::vec3 p = glm::cross(ray.Direction, v1v3);
+			const double d = glm::dot(v1v2, p);
+			if(abs(d) < 0){ return false; }
+			const glm::vec3 t = ray.Origin - v1;
+			const double u = glm::dot(t, p) * (1.0 / d);
+			if(u < 0.0f || u > 1.0f){return false;}
+			const glm::vec3 q = glm::cross(t, v1v2);
+			const double v = glm::dot(ray.Direction, q) * (1.0f / d);
+			if (v < 0.0f || u + v > 1.0f) { return false; }
+			double dist = glm::dot(v1v3, q) * (1.0 / d);
+			if (dist < 0) { return false; }
+			if(dist <= tmin)
+			{
+				glm::vec3 normalAtIntersection = -glm::normalize(glm::cross(v1v2, v1v3));	//inwards facing normal
+				float dotBetween = glm::dot(ray.Direction, normalAtIntersection);
+				if(glm::degrees(glm::acos(dotBetween)) >= 90.0f)	// termination condition for same direction facing normals
+				{
+					// add termination condition for rays (from paper)	
+					tmin = dist;
+					rayHitInfo.T = tmin;
+					return true;
+				}
+			}
+			return false;
+			//return ShapeObject->Shape->Intersect(ray, tmin, rayHitInfo);
+		}
+		RayHitInfo leftHitInfo, rightHitInfo;
+		bool leftHit = LeftNode == nullptr ? false : LeftNode->Intersect(ray, mesh, tmin, leftHitInfo);
+		bool rightHit = RightNode == nullptr ? false : RightNode->Intersect(ray, mesh, tmin, rightHitInfo);
+		if (leftHit && rightHit)
+		{
+			rayHitInfo = leftHitInfo.T < rightHitInfo.T ? leftHitInfo : rightHitInfo;
+			tmin = rayHitInfo.T;
+			return true;
+		}
+		rayHitInfo = leftHit ? leftHitInfo : rayHitInfo;
+		rayHitInfo = rightHit ? rightHitInfo : rayHitInfo;
+		if (leftHit || rightHit)
+		{
+			tmin = rayHitInfo.T;
+		}
+		return (leftHit || rightHit);
+	}
 	return false;
 }
 
@@ -179,8 +262,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("0.off") + 1); 
-	strcpy(x, "0.off");
+	char* x = (char*)malloc(strlen("centaur.off") + 1); 
+	strcpy(x, "centaur.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -201,7 +284,9 @@ int main(int, char ** argv)
 		normals[i] = glm::vec3(0,0,0);
 	}
 	std::vector<BBox> boundingBoxes(mesh->tris.size());
-	for (unsigned i = 0; i < mesh->tris.size(); ++i) 
+	std::vector<Object*> objects(mesh->tris.size());
+#pragma omp parallel for
+	for (int i = 0; i < mesh->tris.size(); ++i) 
 	{
 		int v1Index = (mesh->tris[i]->v1i);
 		int v2Index = (mesh->tris[i]->v2i);
@@ -226,7 +311,12 @@ int main(int, char ** argv)
 			std::max(std::max(v1.y, v2.y), v3.y),
 			std::max(std::max(v1.z, v2.z), v3.z));
 		boundingBoxes[i] = triangleBox;
+		objects[i] = new Object();
+		objects[i]->Triangle = mesh->tris[i];
+		objects[i]->BoundingBox = boundingBoxes[i];
 	}
+
+	BVH bvhNode(objects, mesh, 0);
 
 	for (unsigned i = 0; i < normals.size(); ++i) {
 		normals[i] = glm::normalize(normals[i]);
@@ -234,64 +324,13 @@ int main(int, char ** argv)
 
 	std::mt19937 generator;
 	std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
-	//for(unsigned i = 0; i < mesh->tris.size(); ++i)
-	for(unsigned i = 0; i < mesh->verts.size(); ++i)
+#pragma omp parallel for
+	for(int i = 0; i < mesh->verts.size(); ++i)
 	{
-		//vector<glm::vec3> neighbourNormals;
 		glm::vec3 normal(0, 0, 0);
-		//for (unsigned j = 0; j < mesh->verts[i]->triList.size(); ++j)
-		//{
-		//	auto v1Coords = mesh->verts[mesh->tris[j]->v1i]->coords;
-		//	auto v1x = v1Coords[0], v1y = v1Coords[1], v1z = v1Coords[2];
-		//	auto v2Coords = mesh->verts[mesh->tris[j]->v2i]->coords;
-		//	auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
-		//	auto v3Coords = mesh->verts[mesh->tris[j]->v3i]->coords;
-		//	auto v3x = v3Coords[0], v3y = v3Coords[1], v3z = v3Coords[2];
-		//	auto ux = v2x - v1x, uy = v2y - v1y, uz = v2z - v1z;
-		//	auto vx = v3x - v1x, vy = v3y - v1y, vz = v3z - v1z;
-		//	auto nx = uy * vz - uz * vy;
-		//	auto ny = uz * vx - ux * vz;
-		//	auto nz = ux * vy - uy * vx;
-		//	glm::vec3 normalTemp(nx, ny, nz);
-
-		//	glm::vec3 v1(v1x, v1y, v1z);
-		//	glm::vec3 v2(v2x, v2y, v2z);
-		//	glm::vec3 v3(v3x, v3y, v3z);
-		//	glm::vec3 v1v2 = v2 - v1;
-		//	glm::vec3 v1v3 = v3 - v1;
-		//	normalTemp = glm::cross(v1v2, v1v3);
-		//	//normalTemp = glm::normalize(normalTemp);
-		//	normal.x += normalTemp.x; // (float)mesh->verts[i]->triList.size();
-		//	normal.y += normalTemp.y; // (float)mesh->verts[i]->triList.size();
-		//	normal.z += normalTemp.z; // (float)mesh->verts[i]->triList.size();
-		//	//neighbourNormals.push_back(glm::normalize(normalTemp));
-		//}
-		
-		/*auto v1Coords = mesh->verts[mesh->tris[i]->v1i]->coords;
-		auto v1x = v1Coords[0], v1y = v1Coords[1], v1z = v1Coords[2];
-		auto v2Coords = mesh->verts[mesh->tris[i]->v2i]->coords;
-		auto v2x = v2Coords[0], v2y = v2Coords[1], v2z = v2Coords[2];
-		auto v3Coords = mesh->verts[mesh->tris[i]->v3i]->coords;
-		auto v3x = v3Coords[0], v3y = v3Coords[1], v3z = v3Coords[2];
-		
-		auto ux = v2x - v1x, uy = v2y - v1y, uz = v2z - v1z;
-		auto vx = v3x - v1x, vy = v3y - v1y, vz = v3z - v1z;
-		auto nx = uy * vz - uz * vy; 
-		auto ny = uz * vx - ux * vz;
-		auto nz = ux * vy - uy * vx;
-		glm::vec3 normal(nx, ny, nz);*/
-		/*glm::vec3 center((v1x + v2x + v3x) / 3,
-			(v1y + v2y + v3y) / 3,
-			(v1z + v2z + v3z) / 3);
-		centroids[i] = center;*/
 		glm::vec3 vx(mesh->verts[i]->coords[0], mesh->verts[i]->coords[1], mesh->verts[i]->coords[2]);
 		centroids[i] = vx;
 		normal = glm::normalize(normal);
-		//normalize
-		//if (normal != normals[i]) {
-		//	std::cout << "calculated normals differ at vertex" << i << " : " << normals[i].x << " " << normals[i].y << " " << normals[i].z << " , " << normal.x << " " << normal.y << " " << normal.z << std::endl;
-		//}
-		//normals[i] = glm::normalize(normal);
 		negatedNormals[i] = -normals[i];
 		rays[i].resize(30);
 		for(unsigned j = 0; j < rays[i].size(); ++j)
@@ -315,7 +354,7 @@ int main(int, char ** argv)
 					accepted = true;
 				}
 			}
-			rays[i][j].Origin = centroids[i];// +rays[i][j].Direction * 1.0f;// (float)1e-1;	// some epsilon for robustness in intersection tests
+			rays[i][j].Origin = centroids[i] + rays[i][j].Direction * (float)1e-6;	// some epsilon for robustness in intersection tests
 		}
 		directions[i] = rays[i][0].Direction;
 		centroids[i] = rays[i][0].Origin;
@@ -326,48 +365,54 @@ int main(int, char ** argv)
 	{
 		for(unsigned j = 0; j < rays[i].size(); ++j)
 		{
-			bool isHit = false;
+			//bool isHit = false;
 			double tmin = DBL_MAX;
-			for(unsigned k = 0; k < mesh->tris.size(); ++k)
+			RayHitInfo info;
+			if(bvhNode.Intersect(rays[i][j], mesh, tmin, info))
 			{
-				const glm::vec3 v1(mesh->verts[mesh->tris[k]->v1i]->coords[0],
-					mesh->verts[mesh->tris[k]->v1i]->coords[1],
-					mesh->verts[mesh->tris[k]->v1i]->coords[2]);
-				const glm::vec3 v2(mesh->verts[mesh->tris[k]->v2i]->coords[0],
-					mesh->verts[mesh->tris[k]->v2i]->coords[1],
-					mesh->verts[mesh->tris[k]->v2i]->coords[2]);
-				const glm::vec3 v3(mesh->verts[mesh->tris[k]->v3i]->coords[0],
-					mesh->verts[mesh->tris[k]->v3i]->coords[1],
-					mesh->verts[mesh->tris[k]->v3i]->coords[2]);
-				const glm::vec3 v1v2 = v2 - v1;
-				const glm::vec3 v1v3 = v3 - v1;
-				const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
-				const double d = glm::dot(v1v2, p);
-				if(abs(d) < 0){ continue; }
-				const glm::vec3 t = rays[i][j].Origin - v1;
-				const double u = glm::dot(t, p) * (1.0 / d);
-				if(u < 0.0f || u > 1.0f){continue;}
-				const glm::vec3 q = glm::cross(t, v1v2);
-				const double v = glm::dot(rays[i][j].Direction, q) * (1.0f / d);
-				if (v < 0.0f || u + v > 1.0f) { continue; }
-				double dist = glm::dot(v1v3, q) * (1.0 / d);
-				if (dist < 0) { continue; }
-				if(dist <= tmin)
-				{
-					glm::vec3 normalAtIntersection = -glm::normalize(glm::cross(v1v2, v1v3));	//inwards facing normal
-					float dotBetween = glm::dot(rays[i][j].Direction, normalAtIntersection);
-					if(glm::degrees(glm::acos(dotBetween)) >= 90.0f)	// termination condition for same direction facing normals
-					{
-						// add termination condition for rays (from paper)	
-						isHit = true;
-						tmin = dist;
-					}
-				}		
-			}
-			if(isHit)
-			{
+				//isHit = true;
 				rayDistances[i].push_back(tmin);
 			}
+			//for(unsigned k = 0; k < mesh->tris.size(); ++k)
+			//{
+			//	const glm::vec3 v1(mesh->verts[mesh->tris[k]->v1i]->coords[0],
+			//		mesh->verts[mesh->tris[k]->v1i]->coords[1],
+			//		mesh->verts[mesh->tris[k]->v1i]->coords[2]);
+			//	const glm::vec3 v2(mesh->verts[mesh->tris[k]->v2i]->coords[0],
+			//		mesh->verts[mesh->tris[k]->v2i]->coords[1],
+			//		mesh->verts[mesh->tris[k]->v2i]->coords[2]);
+			//	const glm::vec3 v3(mesh->verts[mesh->tris[k]->v3i]->coords[0],
+			//		mesh->verts[mesh->tris[k]->v3i]->coords[1],
+			//		mesh->verts[mesh->tris[k]->v3i]->coords[2]);
+			//	const glm::vec3 v1v2 = v2 - v1;
+			//	const glm::vec3 v1v3 = v3 - v1;
+			//	const glm::vec3 p = glm::cross(rays[i][j].Direction, v1v3);
+			//	const double d = glm::dot(v1v2, p);
+			//	if(abs(d) < 0){ continue; }
+			//	const glm::vec3 t = rays[i][j].Origin - v1;
+			//	const double u = glm::dot(t, p) * (1.0 / d);
+			//	if(u < 0.0f || u > 1.0f){continue;}
+			//	const glm::vec3 q = glm::cross(t, v1v2);
+			//	const double v = glm::dot(rays[i][j].Direction, q) * (1.0f / d);
+			//	if (v < 0.0f || u + v > 1.0f) { continue; }
+			//	double dist = glm::dot(v1v3, q) * (1.0 / d);
+			//	if (dist < 0) { continue; }
+			//	if(dist <= tmin)
+			//	{
+			//		glm::vec3 normalAtIntersection = -glm::normalize(glm::cross(v1v2, v1v3));	//inwards facing normal
+			//		float dotBetween = glm::dot(rays[i][j].Direction, normalAtIntersection);
+			//		if(glm::degrees(glm::acos(dotBetween)) >= 90.0f)	// termination condition for same direction facing normals
+			//		{
+			//			// add termination condition for rays (from paper)	
+			//			isHit = true;
+			//			tmin = dist;
+			//		}
+			//	}		
+			//}
+			//if(isHit)
+			//{
+			//	rayDistances[i].push_back(tmin);
+			//}
 		}
 	}
 	vector<float> sdf;
