@@ -262,8 +262,8 @@ int main(int, char ** argv)
 	Mesh* mesh = new Mesh();
 	Painter* painter = new Painter();
 	// load mesh
-	char* x = (char*)malloc(strlen("centaur.off") + 1); 
-	strcpy(x, "centaur.off");
+	char* x = (char*)malloc(strlen("man.off") + 1); 
+	strcpy(x, "man.off");
 	mesh->loadOff(x);
 
 	const int numVertices = mesh->verts.size();
@@ -467,11 +467,31 @@ int main(int, char ** argv)
 	}
 	vector<float> nsdf;
 	const float sdfAlpha = 4.0f;
+	ofstream nsdfFile;
+	nsdfFile.open("nsdf.csv");
 	for(unsigned i = 0; i < sdf.size(); ++i)
 	{
 		float normalized = glm::log(((sdf[i] - minSdf) / (maxSdf - minSdf)) * sdfAlpha + 1.0f) / glm::log(sdfAlpha + 1.0f);
 		nsdf.push_back(normalized);
+		nsdfFile << normalized << std::endl;
 	}
+	nsdfFile.close();
+	
+	vector<int> histogramBins(50);
+	for (unsigned i = 0; i < histogramBins.size(); ++i) {
+		histogramBins[i] = 0;
+	}
+	const double binStep = 1.0 / (double)histogramBins.size();
+	for (unsigned i = 0; i < nsdf.size(); ++i) {
+		auto idx = std::min(glm::floor(nsdf[i] / binStep), histogramBins.size() - 1.0);
+		histogramBins[idx] += 1;
+	}
+	ofstream histogramFile;
+	histogramFile.open("histogram.csv");
+	for (unsigned i = 0; i < histogramBins.size(); ++i) {
+		histogramFile << (i + 1) * binStep << "," << histogramBins[i] << std::endl;
+	}
+	histogramFile.close();
 
 	/*
 	cout << "------------------" << endl << "Dijkstra" << endl << "------------------" << endl;
