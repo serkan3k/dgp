@@ -11,6 +11,7 @@
 #include <Eigen/Dense>
 #include "glm/glm.hpp"
 #include "glm/ext/scalar_constants.inl"
+#include "GMM.h"
 
 #include "Mesh.h"
 #include "Painter.h"
@@ -476,6 +477,47 @@ int main(int, char ** argv)
 		nsdfFile << normalized << std::endl;
 	}
 	nsdfFile.close();
+
+	int dimension = 1;
+	int numData = nsdf.size();
+	int numIterations = 200;
+	int numGaussianComponents = 5;
+
+	Gaussian_Mixture_Model GMM = Gaussian_Mixture_Model("full", dimension, numGaussianComponents);
+	double **data = new double*[numData];
+	for (int i = 0; i < numData; ++i) {
+		data[i] = new double[dimension];
+		data[i][0] = nsdf[i];
+	}
+	for (int i = 0; i < numIterations; ++i) {
+		double logLikelihood;
+		if (i == 0) GMM.Initialize(numData, data);
+		logLikelihood = GMM.Expectaion_Maximization(numData, data);
+		if ((i + 1) % 10 == 0) { 
+			cout << i + 1 << " , " << logLikelihood << std::endl;
+		}
+	}
+	cout << std::endl <<"mean" << std::endl;
+	for (int i = 0; i < numGaussianComponents; ++i) {
+		for (int j = 0; j < dimension; ++j) {
+			cout << GMM.mean[i][j];
+		}
+		cout << std::endl;
+	}
+	ofstream gmmfile;
+	gmmfile.open("gmmresult.txt");
+	for (int j = 0; j < numGaussianComponents; ++j) {
+		for (int i = 0; i < numData; ++i) {
+			if (GMM.Classify(data[i]) == j) {
+				gmmfile << data[i][0] << " , " << GMM.Classify(data[i]) << std::endl;
+ 			}
+		}
+	}
+	gmmfile.close();
+	for (int i = 0; i < numData; ++i) {
+		delete[] data[i];
+	}
+	delete[] data;
 	
 	vector<int> histogramBins(50);
 	for (unsigned i = 0; i < histogramBins.size(); ++i) {

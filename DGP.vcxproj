@@ -136,6 +136,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <PreprocessorDefinitions>COIN_DLL;SOWIN_DLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -162,11 +163,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GMM.cpp" />
+    <ClCompile Include="Kmeans.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Painter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GMM.h" />
+    <ClInclude Include="Kmeans.h" />
+    <ClInclude Include="Matrix.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Painter.h" />
   </ItemGroup>

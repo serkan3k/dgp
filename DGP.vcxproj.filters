@@ -24,12 +24,30 @@
     <ClCompile Include="Painter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GMM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Kmeans.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Matrix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Painter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GMM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Kmeans.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
