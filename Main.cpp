@@ -481,7 +481,7 @@ int main(int, char ** argv)
 	int dimension = 1;
 	int numData = nsdf.size();
 	int numIterations = 200;
-	int numGaussianComponents = 5;
+	int numGaussianComponents = 3;
 
 	Gaussian_Mixture_Model GMM = Gaussian_Mixture_Model("full", dimension, numGaussianComponents);
 	double **data = new double*[numData];
@@ -506,11 +506,21 @@ int main(int, char ** argv)
 	}
 	ofstream gmmfile;
 	gmmfile.open("gmmresult.txt");
-	for (int j = 0; j < numGaussianComponents; ++j) {
+	std::vector<int> nsdfSegments(nsdf.size());
+	/*for (int j = 0; j < numGaussianComponents; ++j) {
 		for (int i = 0; i < numData; ++i) {
 			if (GMM.Classify(data[i]) == j) {
+				nsdfSegments[i] = GMM.Classify(data[i]);
 				gmmfile << data[i][0] << " , " << GMM.Classify(data[i]) << std::endl;
  			}
+		}
+	}*/
+	for (int i = 0; i < numData; ++i) {
+		for (int j = 0; j < numGaussianComponents; ++j) {	
+			if (GMM.Classify(data[i]) == j) {
+				nsdfSegments[i] = GMM.Classify(data[i]);
+				gmmfile << data[i][0] << " , " << j << std::endl;
+			}
 		}
 	}
 	gmmfile.close();
@@ -1715,7 +1725,8 @@ int main(int, char ** argv)
 	*/
 	
 	//root->addChild( painter->getShapeSep(mesh) );
-	root->addChild(painter->getSdfShapeSep(mesh, nsdf));
+	//root->addChild(painter->getSdfShapeSep(mesh, nsdf));
+	root->addChild(painter->getSdfSegmentedShapeSep(mesh, nsdf, nsdfSegments));
 	//root->addChild(painter->getRayCastRaysShapeSep(mesh, centroids, directions));
 	int visualization = 1;
 	while (visualization <= 0 || visualization > 4) {

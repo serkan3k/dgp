@@ -27,7 +27,8 @@ class Painter
 {
 public:
 	SoSeparator* getShapeSep(Mesh* mesh);
-	SoSeparator* getSdfShapeSep(Mesh* mesh, std::vector<float> normalizedSdf);
+	SoSeparator* getSdfShapeSep(Mesh* mesh, std::vector<float> &normalizedSdf);
+	SoSeparator* getSdfSegmentedShapeSep(Mesh* mesh, std::vector<float> &normalizedSdf, std::vector<int> &nsdfSegment);
 	SoSeparator* getRayCastRaysShapeSep(Mesh* mesh, std::vector<glm::vec3> rayOrigins, std::vector<glm::vec3> rayDirections);
 	SoSeparator * getSpheresSep(Mesh * mesh, float deltaX, float deltaY, float scale);
 	SoSeparator * getShortestPathSep(Mesh * mesh, const vector<int> &shortestPathVertices);
